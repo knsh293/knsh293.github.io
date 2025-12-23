@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐔雞兔同籠大作戰🐇</title>
+    <style>
+        :root {
+            --primary-color: #4CAF50;
+            --secondary-color: #FF9800;
+            --accent-color: #2196F3;
+            --danger-color: #f44336;
+            --bg-color: #e3f2fd;
+            --card-bg: #fff;
+            --text-main: #37474f;
+            --number-bg: #333;
+            --number-text: #fff;
+        }
+
+        body {
+            font-family: "Microsoft JhengHei", "Heiti TC", sans-serif;
+            background-color: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 10px;
+            color: var(--text-main);
+        }
+
+        h1 {
+            color: #455a64;
+            margin: 15px 0;
+            font-size: 2rem;
+            text-align: center;
+        }
+
+        /* --- 頂部儀表板區域 --- */
+        .dashboard {
+            display: flex;
+            gap: 20px;
+            width: 100%;
+            max-width: 1000px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .board-card {
+            background: var(--card-bg);
+            padding: 15px 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            flex: 1;
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid transparent;
+        }
+
+        .board-target {
+            border-color: var(--secondary-color);
+            background-color: #fff8e1;
+        }
+
+        .board-current {
+            border-color: var(--primary-color);
+            background-color: #e8f5e9;
+            position: relative;
+        }
+
+        .board-title {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .board-data {
+            font-size: 1.5rem;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        /* 目標區的紅色數字樣式 */
+        .target-number {
+            color: #d32f2f; /* 紅色 */
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            font-size: 1.8rem;
+        }
+
+        /* 黑色翻牌數字樣式 (用於儀表板與作答區) */
+        .flip-number, .answer-display {
+            background: var(--number-bg);
+            color: var(--number-text);
+            padding: 5px 0; /* 調整內距 */
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 1.8rem;
+            width: 70px; /* 固定寬度，確保上下一致 */
+            text-align: center;
+            display: inline-block;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            border: none;
+        }
+
+        /* --- 遊戲主區域 --- */
+        .game-area {
+            display: flex;
+            gap: 15px;
+            width: 100%;
+            max-width: 1100px;
+            align-items: stretch;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        /* 左側控制 */
+        .side-panel {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-width: 120px;
+            justify-content: center;
+        }
+
+        .control-group {
+            text-align: center;
+        }
+
+        .btn-circle {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            border: none;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: transform 0.1s;
+        }
+        .btn-circle:active { transform: scale(0.9); }
+        .btn-plus { background: var(--primary-color); color: white; }
+        .btn-minus { background: var(--secondary-color); color: white; }
+
+        .btn-text {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border: none;
+            border-radius: 5px;
+            background: #ddd;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-text:hover { background: #ccc; }
+
+        /* 中央柵欄 */
+        .fence-container {
+            flex: 2;
+            min-width: 320px;
+            background: #8d6e63;
+            padding: 15px;
+            border-radius: 15px;
+            border: 8px solid #5d4037;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            position: relative;
+        }
+
+        .fence-row {
+            flex: 1;
+            background: rgba(255,255,255,0.9);
+            border-radius: 10px;
+            padding: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            align-content: center;
+            gap: 5px;
+            min-height: 120px;
+            position: relative;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .fence-row::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 5rem;
+            opacity: 0.1;
+            pointer-events: none;
+        }
+        #rowChicken::before { content: '🐔'; }
+        #rowRabbit::before { content: '🐇'; }
+
+        .animal-item {
+            font-size: 2.8rem;
+            animation: bounceIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            line-height: 1;
+            user-select: none;
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0); opacity: 0; }
+            60% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+
+        .btn-clear-abs {
+            position: absolute;
+            top: -20px;
+            right: -10px;
+            background: var(--danger-color);
+            color: white;
+            border: 2px solid white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            z-index: 10;
+            font-weight: bold;
+        }
+
+        /* 右側交換區 */
+        .swap-panel {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 20px;
+            min-width: 180px;
+        }
+
+        .btn-swap {
+            padding: 15px 10px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        .btn-swap:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 rgba(0,0,0,0.2);
+        }
+
+        .swap-c-to-r {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+            border: 2px solid #ff9800;
+            color: #e65100;
+        }
+        
+        .swap-r-to-c {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border: 2px solid #4caf50;
+            color: #1b5e20;
+        }
+
+        .swap-icon { font-size: 1.8rem; }
+        .swap-tag { 
+            background: rgba(0,0,0,0.1); 
+            padding: 2px 8px; 
+            border-radius: 10px; 
+            font-size: 0.9rem;
+        }
+
+        /* --- 下方作答區 --- */
+        .answer-area {
+            background: white;
+            margin-top: 25px;
+            padding: 20px 40px;
+            border-radius: 50px;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .answer-group {
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-submit {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 40px;
+            font-size: 1.4rem;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(33, 150, 243, 0.3);
+            font-weight: bold;
+        }
+
+        /* 浮動雲朵特效 */
+        .floating-cloud {
+            position: absolute;
+            background: white;
+            color: #333;
+            border: 2px solid #333;
+            border-radius: 15px;
+            padding: 8px 12px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            pointer-events: none;
+            z-index: 100;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            white-space: pre; /* 支援 \n 換行 */
+            text-align: center;
+            line-height: 1.4;
+        }
+        .floating-cloud::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            margin-left: -8px;
+            border-width: 8px 8px 0;
+            border-style: solid;
+            border-color: #333 transparent;
+        }
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(0.8); opacity: 0; }
+            20% { transform: translateY(-30px) scale(1.1); opacity: 1; }
+            100% { transform: translateY(-80px) scale(0.9); opacity: 0; }
+        }
+
+        /* Overlay */
+        .overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+        .feedback-card {
+            background: white; padding: 40px; border-radius: 20px;
+            text-align: center; animation: popIn 0.3s;
+        }
+        .btn-retry, .btn-play-again {
+            margin: 10px; padding: 10px 25px; border: none; border-radius: 8px;
+            font-size: 1.2rem; cursor: pointer; color: white;
+        }
+        .btn-retry { background: #757575; }
+        .btn-play-again { background: var(--primary-color); }
+
+    </style>
+</head>
+<body>
+
+    <h1>🐔雞兔同籠大作戰🐇</h1>
+
+    <div class="dashboard">
+        <div class="board-card board-target">
+            <div class="board-title">目標</div>
+            <div class="board-data">
+                <span>總動物數: <span class="target-number" id="targetTotal">0</span></span>
+                <span>/</span>
+                <span>總腳數: <span class="target-number" id="targetLegs">0</span></span>
+            </div>
+        </div>
+
+        <div class="board-card board-current">
+            <div class="board-title">目前數量</div>
+            <div class="board-data">
+                <div>動物 <span class="flip-number" id="currentTotal">0</span> 隻</div>
+                <div>腳 <span class="flip-number" id="currentLegs">0</span> 隻</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="game-area">
+        
+        <div class="side-panel">
+            <div class="control-group">
+                <div style="font-size: 2rem;">🐔</div>
+                <div>
+                    <button class="btn-circle btn-plus" onclick="updateAnimals('chicken', 1)">+</button>
+                    <button class="btn-circle btn-minus" onclick="updateAnimals('chicken', -1)">-</button>
+                </div>
+                <button class="btn-text" onclick="fillAll('chicken')">全放雞</button>
+            </div>
+            <hr style="width:80%; border:1px dashed #ccc;">
+            <div class="control-group">
+                <div style="font-size: 2rem;">🐇</div>
+                <div>
+                    <button class="btn-circle btn-plus" onclick="updateAnimals('rabbit', 1)">+</button>
+                    <button class="btn-circle btn-minus" onclick="updateAnimals('rabbit', -1)">-</button>
+                </div>
+                <button class="btn-text" onclick="fillAll('rabbit')">全放兔</button>
+            </div>
+        </div>
+
+        <div class="fence-container">
+            <button class="btn-clear-abs" onclick="clearFence()">🗑️ 清空</button>
+            
+            <div class="fence-row" id="rowChicken"></div>
+            
+            <div class="fence-row" id="rowRabbit"></div>
+
+            <div id="animationAnchor" style="position:absolute; top:50%; left:50%; width:0; height:0;"></div>
+        </div>
+
+        <div class="swap-panel">
+            <button class="btn-swap swap-c-to-r" onclick="swapAnimal('c2r')">
+                <span class="swap-icon">🐔 ➡ 🐇</span>
+                <span>把雞換成兔</span>
+                <span class="swap-tag">腳數 +2</span>
+            </button>
+
+            <button class="btn-swap swap-r-to-c" onclick="swapAnimal('r2c')">
+                <span class="swap-icon">🐇 ➡ 🐔</span>
+                <span>把兔換成雞</span>
+                <span class="swap-tag">腳數 -2</span>
+            </button>
+        </div>
+
+    </div>
+
+    <div class="answer-area">
+        <div class="answer-group">
+            雞 <input type="text" id="ansChicken" class="answer-display" readonly value="0"> 隻
+        </div>
+        <div class="answer-group">
+            兔 <input type="text" id="ansRabbit" class="answer-display" readonly value="0"> 隻
+        </div>
+        <button class="btn-submit" onclick="checkAnswer()">送出答案</button>
+    </div>
+
+    <div class="overlay" id="feedbackOverlay">
+        <div class="feedback-card">
+            <div id="fbIcon" style="font-size: 6rem;"></div>
+            <h2 id="fbTitle" style="margin: 10px 0;"></h2>
+            <p id="fbMsg" style="font-size: 1.2rem; color: #666;"></p>
+            <div id="fbBtns"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- 遊戲變數 ---
+        let targetC = 0; // 題目雞
+        let targetR = 0; // 題目兔
+        let targetTotal = 0; // 題目總隻數
+
+        let currentC = 0; // 柵欄雞
+        let currentR = 0; // 柵欄兔
+
+        // --- 初始化 ---
+        function initGame() {
+            // 隨機出題 (總數控制在 5-12 隻)
+            targetC = Math.floor(Math.random() * 8) + 1; 
+            targetR = Math.floor(Math.random() * 8) + 1;
+            targetTotal = targetC + targetR;
+            let targetLegs = (targetC * 2) + (targetR * 4);
+
+            // 更新題目面板
+            document.getElementById('targetTotal').textContent = targetTotal;
+            document.getElementById('targetLegs').textContent = targetLegs;
+
+            // 清空柵欄
+            currentC = 0;
+            currentR = 0;
+            renderAll();
+            hideOverlay();
+        }
+
+        // --- 核心操作邏輯 ---
+
+        // 1. 基礎增減 (+/-)
+        function updateAnimals(type, change) {
+            if (change > 0 && (currentC + currentR) >= targetTotal) {
+                showToast();
+                return;
+            }
+
+            let prevC = currentC;
+            let prevR = currentR;
+
+            if (type === 'chicken') {
+                currentC += change;
+                if (currentC < 0) currentC = 0;
+            } else {
+                currentR += change;
+                if (currentR < 0) currentR = 0;
+            }
+
+            let diffC = currentC - prevC;
+            let diffR = currentR - prevR;
+            if (diffC !== 0 || diffR !== 0) {
+                renderAll();
+                triggerCloudAnimation(diffC + diffR, (diffC*2 + diffR*4));
+            }
+        }
+
+        // 2. 全部填滿
+        function fillAll(type) {
+            let prevC = currentC;
+            let prevR = currentR;
+
+            if (type === 'chicken') {
+                currentC = targetTotal;
+                currentR = 0;
+            } else {
+                currentC = 0;
+                currentR = targetTotal;
+            }
+
+            renderAll();
+            
+            let diffC = currentC - prevC;
+            let diffR = currentR - prevR;
+            triggerCloudAnimation(diffC + diffR, (diffC*2 + diffR*4));
+        }
+
+        // 3. 交換邏輯
+        function swapAnimal(mode) {
+            if (mode === 'c2r') {
+                // 雞換兔
+                if (currentC > 0) {
+                    currentC--;
+                    currentR++;
+                    renderAll();
+                    // 這裡的 diffCount 為 0，triggerCloudAnimation 會自動隱藏第一行
+                    triggerCloudAnimation(0, 2); 
+                } else {
+                    showToast();
+                }
+            } else if (mode === 'r2c') {
+                // 兔換雞
+                if (currentR > 0) {
+                    currentR--;
+                    currentC++;
+                    renderAll();
+                    // 這裡的 diffCount 為 0
+                    triggerCloudAnimation(0, -2);
+                } else {
+                    showToast();
+                }
+            }
+        }
+
+        function clearFence() {
+            currentC = 0;
+            currentR = 0;
+            renderAll();
+        }
+
+        // --- 畫面渲染 ---
+        function renderAll() {
+            // 渲染雞
+            const rowC = document.getElementById('rowChicken');
+            rowC.innerHTML = '';
+            for(let i=0; i<currentC; i++) {
+                let span = document.createElement('div');
+                span.className = 'animal-item';
+                span.textContent = '🐔';
+                rowC.appendChild(span);
+            }
+
+            // 渲染兔
+            const rowR = document.getElementById('rowRabbit');
+            rowR.innerHTML = '';
+            for(let i=0; i<currentR; i++) {
+                let span = document.createElement('div');
+                span.className = 'animal-item';
+                span.textContent = '🐇';
+                rowR.appendChild(span);
+            }
+
+            // 更新儀表板
+            let total = currentC + currentR;
+            let legs = (currentC * 2) + (currentR * 4);
+            document.getElementById('currentTotal').textContent = total;
+            document.getElementById('currentLegs').textContent = legs;
+
+            // 更新作答區
+            document.getElementById('ansChicken').value = currentC;
+            document.getElementById('ansRabbit').value = currentR;
+        }
+
+        // --- 特效與回饋 ---
+        
+        // 雲朵動畫 (優化版：根據數值決定顯示行數)
+        function triggerCloudAnimation(diffCount, diffLegs) {
+            if (diffCount === 0 && diffLegs === 0) return;
+
+            const anchor = document.getElementById('animationAnchor');
+            const cloud = document.createElement('div');
+            cloud.className = 'floating-cloud';
+            
+            let displayText = "";
+
+            // 只有當動物數量有變化時，才顯示第一行
+            if (diffCount !== 0) {
+                let animalSign = diffCount > 0 ? '+' : '';
+                displayText += `動物 ${animalSign}${diffCount}`;
+            }
+
+            // 只有當腳數有變化時，才顯示第二行
+            if (diffLegs !== 0) {
+                if (displayText !== "") displayText += "\n"; // 如果有第一行，加換行符號
+                let legSign = diffLegs > 0 ? '+' : '';
+                displayText += `腳 ${legSign}${diffLegs}`;
+            }
+
+            cloud.textContent = displayText;
+            
+            // 設定顏色 (以腳為主要顏色指示，若沒變則看動物)
+            if (diffLegs > 0) cloud.style.color = '#2e7d32'; 
+            else if (diffLegs < 0) cloud.style.color = '#c62828';
+            else cloud.style.color = '#333';
+
+            // 隨機位移
+            let randX = Math.floor(Math.random()*40 - 20);
+            cloud.style.transform = `translate(${randX}px, 0)`;
+
+            anchor.appendChild(cloud);
+            
+            // CSS動畫
+            cloud.style.animation = "floatUp 1.5s ease-out forwards";
+            
+            setTimeout(() => cloud.remove(), 1500);
+        }
+
+        function showToast() {
+            const board = document.querySelector('.board-current');
+            board.style.borderColor = '#f44336';
+            setTimeout(() => board.style.borderColor = '#4CAF50', 500);
+        }
+
+        // --- 檢查答案 ---
+        function checkAnswer() {
+            const overlay = document.getElementById('feedbackOverlay');
+            const icon = document.getElementById('fbIcon');
+            const title = document.getElementById('fbTitle');
+            const msg = document.getElementById('fbMsg');
+            const btns = document.getElementById('fbBtns');
+
+            overlay.style.display = 'flex';
+            btns.innerHTML = '';
+
+            if (currentC === targetC && currentR === targetR) {
+                icon.textContent = '⭕';
+                title.textContent = '答對了！太神啦！';
+                title.style.color = '#4CAF50';
+                msg.textContent = `完美的分配：${currentC} 隻雞，${currentR} 隻兔。`;
+                
+                const btnNext = document.createElement('button');
+                btnNext.textContent = '再玩一次';
+                btnNext.className = 'btn-play-again';
+                btnNext.onclick = initGame;
+                btns.appendChild(btnNext);
+            } else {
+                icon.textContent = '❌';
+                title.textContent = '還差一點點喔！';
+                title.style.color = '#f44336';
+                
+                let currentTotal = currentC + currentR;
+                let currentLegs = (currentC * 2) + (currentR * 4);
+                let targetLegs = (targetC * 2) + (targetR * 4);
+
+                if (currentTotal !== targetTotal) {
+                    msg.textContent = `題目說是 ${targetTotal} 隻動物，但目前只有 ${currentTotal} 隻喔！`;
+                } else {
+                    let diff = targetLegs - currentLegs;
+                    if (diff > 0) {
+                        msg.textContent = `動物數量對了，但是腳少了 ${diff} 隻！試試看把雞換成兔子？`;
+                    } else {
+                        msg.textContent = `動物數量對了，但是腳多了 ${Math.abs(diff)} 隻！試試看把兔子換成雞？`;
+                    }
+                }
+
+                const btnRetry = document.createElement('button');
+                btnRetry.textContent = '繼續調整';
+                btnRetry.className = 'btn-retry';
+                btnRetry.onclick = hideOverlay;
+                btns.appendChild(btnRetry);
+            }
+        }
+
+        function hideOverlay() {
+            document.getElementById('feedbackOverlay').style.display = 'none';
+        }
+
+        window.onload = initGame;
+    </script>
+</body>
+</html>
