@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>流水問題_電動步道</title>
+    <style>
+        :root {
+            /* 質感配色 */
+            --bg-body: #eaeff2;
+            --panel-bg: #ffffff;
+            --primary-dark: #2c3e50;
+            --accent-blue: #3498db;
+            --accent-orange: #e67e22;
+            --accent-red: #e74c3c;
+            --accent-green: #27ae60;
+            --shadow-soft: 0 8px 24px rgba(149, 157, 165, 0.2);
+            --border-radius: 12px;
+        }
+
+        body {
+            font-family: "Segoe UI", "Microsoft JhengHei", sans-serif;
+            background-color: var(--bg-body);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+            color: #333;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            padding: 10px 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            flex-shrink: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e1e4e8;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.4rem;
+            color: var(--primary-dark);
+            font-weight: 800;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        /* 圖示為船 */
+        h1::before {
+            content: "🚢";
+            font-size: 1.2em;
+        }
+
+        .timer-display {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary-dark);
+            background: #fff;
+            padding: 4px 20px;
+            border-radius: 8px;
+            box-shadow: inset 2px 2px 5px rgba(0,0,0,0.05);
+            border: 1px solid #d1d5db;
+            letter-spacing: 1px;
+        }
+
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            flex: 1;
+            padding: 15px;
+            gap: 20px;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Left Panel */
+        .control-panel {
+            width: 300px;
+            background: var(--panel-bg);
+            padding: 15px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-soft);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+            flex-shrink: 0;
+            border: 1px solid #fff;
+        }
+
+        .panel-section {
+            border-bottom: 1px solid #f0f0f0;
+            padding-bottom: 12px;
+        }
+        .panel-section:last-child { border-bottom: none; }
+
+        .section-title {
+            font-weight: 700;
+            color: #57606f;
+            margin-bottom: 10px;
+            display: block;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Buttons */
+        .btn-main {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 8px;
+            color: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .btn-main:active { transform: translateY(2px); box-shadow: 0 2px 3px rgba(0,0,0,0.1); }
+        .btn-main:hover { filter: brightness(1.1); }
+        
+        #btnStart { background: linear-gradient(135deg, #2ecc71, #27ae60); }
+        #btnPause { background: linear-gradient(135deg, #f1c40f, #f39c12); display: none; }
+        #btnReset { background: linear-gradient(135deg, #95a5a6, #7f8c8d); }
+
+        /* Sliders */
+        .slider-box { margin-bottom: 12px; }
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        .slider-label { font-size: 0.85rem; color: #555; }
+        .slider-value {
+            font-weight: bold;
+            font-family: monospace;
+            background: #f1f2f6;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        input[type=range] {
+            width: 100%;
+            height: 5px;
+            background: #dfe6e9;
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+            margin: 5px 0;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: white;
+            border: 2px solid var(--primary-dark);
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: transform 0.1s;
+        }
+        input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.1); }
+
+        /* Track Controls */
+        .track-control-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f8f9fa;
+            padding: 8px 10px;
+            border-radius: 8px;
+            margin-bottom: 6px;
+            border: 1px solid #edf2f7;
+        }
+        .track-legend {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .btn-vis {
+            background: transparent;
+            border: 1px solid #ced4da;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #666;
+        }
+        .btn-vis.active {
+            background: var(--primary-dark);
+            color: white;
+            border-color: var(--primary-dark);
+        }
+
+        /* Canvas Area */
+        .canvas-container {
+            flex: 1;
+            background: var(--panel-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-soft);
+            padding: 10px;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            border-radius: 8px;
+            cursor: grab;
+            width: 100%;
+            height: 100%;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.02);
+            background-color: #fcfcfc;
+        }
+        canvas:active { cursor: grabbing; }
+
+        .tip-box {
+            font-size: 0.8rem;
+            color: #636e72;
+            background: #fff3cd;
+            padding: 10px;
+            border-radius: 8px;
+            line-height: 1.4;
+            border-left: 4px solid var(--accent-orange);
+            margin-top: 5px;
+        }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>流水問題_電動步道</h1>
+    <div class="timer-display" id="globalTimer">0.00 s</div>
+</header>
+
+<div class="main-container">
+    <div class="control-panel">
+        
+        <div class="panel-section">
+            <span class="section-title">實驗流程</span>
+            <button id="btnStart" class="btn-main" onclick="togglePlay()">開始實驗</button>
+            <button id="btnPause" class="btn-main" onclick="togglePlay()">暫停</button>
+            <button id="btnReset" class="btn-main" onclick="resetGame()">重設實驗</button>
+            <div class="tip-box">
+                💡 <b>提示：</b><br>
+                將人物速度設為 <b>0</b> 即可讓人物站立不動。
+            </div>
+        </div>
+
+        <div class="panel-section">
+            <span class="section-title">變因設定</span>
+            
+            <div class="slider-box">
+                <div class="slider-header">
+                    <span class="slider-label">人物速度</span>
+                    <span id="txtPersonSpeed" class="slider-value" style="color:var(--accent-red)">60 cm/s</span>
+                </div>
+                <input type="range" id="slPersonSpeed" min="0" max="200" value="60" step="10" oninput="updateSettings()">
+            </div>
+
+            <div class="slider-box">
+                <div class="slider-header">
+                    <span class="slider-label">步道速度</span>
+                    <span id="txtBeltSpeed" class="slider-value" style="color:var(--accent-blue)">30 cm/s</span>
+                </div>
+                <input type="range" id="slBeltSpeed" min="0" max="200" value="30" step="10" oninput="updateSettings()">
+            </div>
+
+            <div class="slider-box">
+                <div class="slider-header">
+                    <span class="slider-label">步道長度</span>
+                    <span id="txtTrackLen" class="slider-value">1000 cm</span>
+                </div>
+                <input type="range" id="slTrackLen" min="0" max="2000" value="1000" step="100" oninput="updateSettings()">
+            </div>
+        </div>
+
+        <div class="panel-section">
+            <span class="section-title">顯示控制</span>
+            
+            <div class="track-control-row">
+                <div style="display:flex; align-items:center;">
+                    <span class="track-legend" style="background:var(--accent-blue)"></span>
+                    <span style="font-size:0.85rem; font-weight:bold; color:#555;">順流 (向右)</span>
+                </div>
+                <button class="btn-vis active" id="btnVis0" onclick="toggleVisibility(0)">顯示中</button>
+            </div>
+
+            <div class="track-control-row">
+                <div style="display:flex; align-items:center;">
+                    <span class="track-legend" style="background:#95a5a6"></span>
+                    <span style="font-size:0.85rem; font-weight:bold; color:#555;">靜水 (平地)</span>
+                </div>
+                <button class="btn-vis active" id="btnVis1" onclick="toggleVisibility(1)">顯示中</button>
+            </div>
+
+            <div class="track-control-row">
+                <div style="display:flex; align-items:center;">
+                    <span class="track-legend" style="background:var(--accent-orange)"></span>
+                    <span style="font-size:0.85rem; font-weight:bold; color:#555;">逆流 (向左)</span>
+                </div>
+                <button class="btn-vis active" id="btnVis2" onclick="toggleVisibility(2)">顯示中</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="canvas-container" id="canvasWrap">
+        <canvas id="simCanvas"></canvas>
+    </div>
+</div>
+
+<script>
+    /**
+     * 流水問題_電動步道 v7.0
+     * 修正：渲染循環(Loop)邏輯，確保一開始畫面不會被隱藏
+     */
+    
+    // --- State ---
+    const STATE = { IDLE: 'IDLE', RUNNING: 'RUNNING', PAUSED: 'PAUSED' };
+    let currentState = STATE.IDLE;
+    
+    // Canvas
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+    const container = document.getElementById('canvasWrap');
+
+    // Layout
+    let width, height, trackHeight;
+    const START_OFFSET_X = 60; // 跑道起點X偏移
+    
+    // Physics Data
+    let personSpeed = 60; // cm/s
+    let beltSpeed = 30;   // cm/s
+    let trackLength = 1000; // cm
+    
+    // Scale & Timing
+    let pxPerCm = 0.5; 
+    let simTime = 0; 
+    let lastFrameTime = 0;
+
+    // Tracks (預設皆為顯示)
+    const tracks = [
+        { id: 0, name: "順流步道 (向右)", type: 1,  visible: true, personX: 0, offset: 0, finished: false, finishTime: null },
+        { id: 1, name: "靜水平地 (無水流)", type: 0,  visible: true, personX: 0, offset: 0, finished: false, finishTime: null },
+        { id: 2, name: "逆流步道 (向左)", type: -1, visible: true, personX: 0, offset: 0, finished: false, finishTime: null }
+    ];
+
+    // Interaction
+    let isDragging = false;
+    let dragStartX = 0;
+    let initialPersonX = 0;
+
+    // --- Core Lifecycle ---
+
+    function resize() {
+        width = container.clientWidth;
+        height = container.clientHeight;
+        canvas.width = width;
+        canvas.height = height;
+        
+        const totalTracks = 3;
+        const gap = height * 0.05; 
+        trackHeight = (height - gap * 4) / 3;
+        if(trackHeight > 160) trackHeight = 160;
+
+        // 計算縮放比例
+        const availableWidth = width - START_OFFSET_X - 100;
+        pxPerCm = availableWidth / 2000;
+        if(pxPerCm < 0.35) pxPerCm = 0.35;
+        
+        // 確保 resize 後立刻重繪一次
+        draw(); 
+    }
+    
+    window.addEventListener('resize', resize);
+    // 初始化時先手動執行一次 resize
+    resize();
+
+    function updateSettings() {
+        personSpeed = parseInt(document.getElementById('slPersonSpeed').value);
+        beltSpeed = parseInt(document.getElementById('slBeltSpeed').value);
+        trackLength = parseInt(document.getElementById('slTrackLen').value);
+        
+        document.getElementById('txtPersonSpeed').innerText = `${personSpeed} cm/s`;
+        document.getElementById('txtBeltSpeed').innerText = `${beltSpeed} cm/s`;
+        document.getElementById('txtTrackLen').innerText = `${trackLength} cm`;
+        
+        // 設定改變時重繪
+        if(currentState !== STATE.RUNNING) draw();
+    }
+
+    function toggleVisibility(id) {
+        tracks[id].visible = !tracks[id].visible;
+        const btn = document.getElementById(`btnVis${id}`);
+        if(tracks[id].visible) {
+            btn.innerText = "顯示中";
+            btn.className = "btn-vis active";
+        } else {
+            btn.innerText = "已隱藏";
+            btn.className = "btn-vis";
+        }
+        draw();
+    }
+
+    function togglePlay() {
+        const btnStart = document.getElementById('btnStart');
+        const btnPause = document.getElementById('btnPause');
+
+        if (currentState === STATE.IDLE || currentState === STATE.PAUSED) {
+            if(currentState === STATE.IDLE) {
+                simTime = 0;
+                tracks.forEach(t => { t.finished = false; t.finishTime = null; });
+            }
+            currentState = STATE.RUNNING;
+            lastFrameTime = performance.now();
+            
+            btnStart.style.display = 'none';
+            btnPause.style.display = 'block';
+            btnPause.innerText = "暫停";
+            btnPause.style.background = "linear-gradient(135deg, #f1c40f, #f39c12)";
+        } else {
+            currentState = STATE.PAUSED;
+            btnPause.innerText = "繼續";
+            btnPause.style.background = "linear-gradient(135deg, #2ecc71, #27ae60)";
+        }
+        // 注意：這裡不需呼叫 loop()，因為 loop() 現在是一直在跑的
+    }
+
+    function resetGame() {
+        currentState = STATE.IDLE;
+        simTime = 0;
+        document.getElementById('globalTimer').innerText = "0.00 s";
+        document.getElementById('btnStart').style.display = 'block';
+        document.getElementById('btnStart').innerText = "開始實驗";
+        document.getElementById('btnPause').style.display = 'none';
+        
+        tracks.forEach(t => {
+            t.personX = 0;
+            t.offset = 0;
+            t.finished = false;
+            t.finishTime = null;
+        });
+        // 變數重置後，因為 loop() 持續運行，畫面會自動更新
+    }
+
+    // --- Physics & Loop (修正版：持續運行的迴圈) ---
+    function loop() {
+        // 如果是執行狀態，更新物理與時間
+        if(currentState === STATE.RUNNING) {
+            update();
+        }
+
+        // 無論什麼狀態，每一幀都重繪畫面
+        // 這樣可以避免 resize 後畫面空白，或初始化時畫面消失
+        draw();
+        
+        // 持續請求下一幀
+        requestAnimationFrame(loop);
+    }
+
+    function update() {
+        const now = performance.now();
+        const dt = (now - lastFrameTime) / 1000;
+        lastFrameTime = now;
+        
+        if (dt > 0.1) return; 
+
+        simTime += dt;
+        document.getElementById('globalTimer').innerText = simTime.toFixed(2) + " s";
+
+        tracks.forEach(t => {
+            if (t.finished) return;
+
+            // 1. 背景移動計算
+            let bgSpeed = t.type * beltSpeed;
+            t.offset += bgSpeed * pxPerCm * dt;
+
+            // 2. 物理計算
+            let effectiveBeltSpeed = 0;
+            if (t.personX >= 0) effectiveBeltSpeed = bgSpeed;
+            
+            let totalSpeed = personSpeed + effectiveBeltSpeed;
+            let step = totalSpeed * dt;
+            let nextPos = t.personX + step;
+
+            // 3. 終點判斷
+            if (nextPos >= trackLength) {
+                let distRemaining = trackLength - t.personX;
+                if (totalSpeed > 0) {
+                    let timeNeeded = distRemaining / totalSpeed;
+                    let rawTime = simTime - dt + timeNeeded;
+                    t.finishTime = parseFloat(rawTime.toFixed(2));
+                } else {
+                    t.finishTime = parseFloat(simTime.toFixed(2));
+                }
+                
+                t.personX = trackLength;
+                t.finished = true;
+            } else {
+                t.personX = nextPos;
+            }
+
+            // 4. 起點牆壁限制
+            if (t.personX < -30) t.personX = -30;
+        });
+    }
+
+    // --- Drag Logic ---
+    canvas.addEventListener('mousedown', (e) => {
+        if (currentState === STATE.RUNNING) return;
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        
+        const screenPersonX = START_OFFSET_X + (tracks[0].personX * pxPerCm);
+        
+        if (Math.abs(mouseX - screenPersonX) < 60) {
+            isDragging = true;
+            dragStartX = mouseX;
+            initialPersonX = tracks[0].personX;
+            // 修正：不需要在這裡呼叫 loop()，因為它已經是全時運行的
+        }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (isDragging) {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const deltaPx = mouseX - dragStartX;
+            const deltaCm = deltaPx / pxPerCm;
+
+            let newCm = initialPersonX + deltaCm;
+            
+            if (newCm < -50) newCm = -50;
+            if (newCm > trackLength) newCm = trackLength;
+
+            tracks.forEach(t => {
+                t.personX = newCm;
+                t.finished = false;
+                t.finishTime = null;
+            });
+        }
+    });
+
+    window.addEventListener('mouseup', () => {
+        isDragging = false;
+    });
+
+    // --- Drawing ---
+    function draw() {
+        ctx.clearRect(0, 0, width, height);
+        const gap = (height - tracks.length * trackHeight) / (tracks.length + 1);
+
+        tracks.forEach((t, i) => {
+            if (!t.visible) return;
+            const y = gap + (trackHeight + gap) * i;
+            drawBeautifulTrack(ctx, t, y, trackHeight);
+        });
+    }
+
+    function drawBeautifulTrack(ctx, track, y, h) {
+        const startX = START_OFFSET_X;
+        const lengthPx = trackLength * pxPerCm;
+        const endX = startX + lengthPx;
+        
+        const beltY = y + h - 50; 
+        const beltThickness = 30;
+
+        // 1. Title
+        ctx.fillStyle = "#57606f";
+        ctx.font = "bold 16px 'Segoe UI'";
+        ctx.textAlign = "left";
+        ctx.fillText(track.name, 20, y + 20);
+
+        // 2. 步道主體 (基底：灰色水泥)
+        ctx.fillStyle = "#dfe6e9"; 
+        ctx.beginPath();
+        ctx.roundRect(startX, beltY, lengthPx, beltThickness, 0);
+        ctx.fill();
+
+        // 3. 水流/輸送帶層 (只畫在上方 30%)
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(startX, beltY, lengthPx, beltThickness);
+        ctx.clip();
+
+        if (track.type !== 0) {
+            const waterHeight = beltThickness * 0.3; // 30% Height
+            
+            // 水流背景色
+            const beltColor = track.type === 1 ? "#dff9fb" : "#ffeaa7";
+            ctx.fillStyle = beltColor;
+            ctx.fillRect(startX, beltY, lengthPx, waterHeight);
+
+            // 水流紋理 (Arrow/V)
+            const arrowColor = track.type === 1 ? "rgba(52, 152, 219, 0.6)" : "rgba(230, 126, 34, 0.6)";
+            ctx.fillStyle = arrowColor;
+            
+            const patternSize = 30;
+            const shift = track.offset % patternSize;
+            
+            const arrowH = waterHeight; 
+            const arrowMid = beltY + arrowH / 2;
+
+            for(let k = -patternSize; k < lengthPx + patternSize; k += patternSize) {
+                let drawX = startX + k + shift;
+                ctx.beginPath();
+                if (track.type === 1) { // Right
+                    ctx.moveTo(drawX, beltY);
+                    ctx.lineTo(drawX + 6, arrowMid);
+                    ctx.lineTo(drawX, beltY + arrowH);
+                    ctx.lineTo(drawX - 3, beltY + arrowH);
+                    ctx.lineTo(drawX + 3, arrowMid);
+                    ctx.lineTo(drawX - 3, beltY);
+                } else { // Left
+                    ctx.moveTo(drawX, beltY);
+                    ctx.lineTo(drawX - 6, arrowMid);
+                    ctx.lineTo(drawX, beltY + arrowH);
+                    ctx.lineTo(drawX + 3, beltY + arrowH);
+                    ctx.lineTo(drawX - 3, arrowMid);
+                    ctx.lineTo(drawX + 3, beltY);
+                }
+                ctx.fill();
+            }
+        } else {
+            // 平地：上方加一點深色雜點表示質感
+            ctx.fillStyle = "#b2bec3";
+            for(let k=0; k<lengthPx; k+=40) {
+                ctx.fillRect(startX+k, beltY, 2, 2);
+            }
+        }
+        ctx.restore();
+
+        // 步道邊框
+        ctx.strokeStyle = "#b2bec3";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(startX, beltY, lengthPx, beltThickness);
+
+        // 4. Flag (Checkered, NO TEXT)
+        drawCheckeredFlag(ctx, endX, beltY);
+
+        // 5. Length Text
+        ctx.fillStyle = "#95a5a6";
+        ctx.font = "12px Consolas";
+        ctx.textAlign = "center";
+        ctx.fillText(`${trackLength} cm`, startX + lengthPx/2, beltY + beltThickness + 15);
+
+        // 6. Character
+        drawCharacter(ctx, track, beltY, startX);
+    }
+
+    function drawCheckeredFlag(ctx, x, y) {
+        const poleH = 45;
+        // Pole
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x, y - poleH);
+        ctx.strokeStyle = "#2c3e50";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // Flag
+        const flagW = 36;
+        const flagH = 24;
+        const rows = 3;
+        const cols = 4;
+        const cellW = flagW / cols;
+        const cellH = flagH / rows;
+
+        const fx = x;
+        const fy = y - poleH;
+
+        ctx.fillStyle = "#ecf0f1";
+        ctx.fillRect(fx, fy, flagW, flagH);
+
+        ctx.fillStyle = "#2c3e50";
+        for(let r=0; r<rows; r++) {
+            for(let c=0; c<cols; c++) {
+                if ((r+c)%2 === 0) {
+                    ctx.fillRect(fx + c*cellW, fy + r*cellH, cellW, cellH);
+                }
+            }
+        }
+        ctx.strokeStyle = "#333";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(fx, fy, flagW, flagH);
+    }
+
+    function drawCharacter(ctx, track, floorY, startX) {
+        const x = startX + (track.personX * pxPerCm);
+        const headY = floorY - 50;
+        const hipY = floorY - 25;
+        
+        let realSpeed = personSpeed;
+        if (track.personX >= 0) realSpeed += (track.type * beltSpeed);
+        
+        let isStruggling = (personSpeed > 0 && realSpeed < 0 && track.personX >= 0);
+        let isWalking = (personSpeed > 0 && currentState === STATE.RUNNING && !track.finished);
+        
+        let legOffset = 0;
+        let bobY = 0;
+        if (isWalking) {
+            // Slower walk cycle
+            const freq = personSpeed / 50; 
+            const time = performance.now() / 100;
+            legOffset = Math.sin(time * freq) * 10;
+            bobY = Math.abs(Math.cos(time * freq)) * 3;
+        }
+
+        const bodyColor = isStruggling ? "#9b59b6" : "#e74c3c";
+        
+        ctx.strokeStyle = bodyColor;
+        ctx.fillStyle = bodyColor;
+        ctx.lineWidth = 4;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+
+        // Head
+        ctx.beginPath();
+        ctx.arc(x, headY + bobY, 9, 0, Math.PI*2);
+        ctx.fill();
+        
+        if (isStruggling && currentState === STATE.RUNNING) {
+            drawSweat(ctx, x, headY + bobY);
+        }
+
+        // Body
+        ctx.beginPath();
+        ctx.moveTo(x, headY + 9 + bobY);
+        ctx.lineTo(x, hipY + bobY);
+        ctx.stroke();
+
+        // Legs
+        ctx.beginPath();
+        ctx.moveTo(x, hipY + bobY);
+        ctx.lineTo(x - legOffset, floorY);
+        ctx.moveTo(x, hipY + bobY);
+        ctx.lineTo(x + legOffset, floorY);
+        ctx.stroke();
+
+        // Arms
+        ctx.beginPath();
+        const shoulderY = headY + 15 + bobY;
+        ctx.moveTo(x, shoulderY);
+        ctx.lineTo(x + legOffset, shoulderY + 15); 
+        ctx.moveTo(x, shoulderY);
+        ctx.lineTo(x - legOffset, shoulderY + 15);
+        ctx.stroke();
+
+        // Finish Time
+        if (track.finished && track.finishTime !== null) {
+            drawFinishTime(ctx, x, floorY + 35, track.finishTime);
+        }
+    }
+
+    function drawSweat(ctx, x, y) {
+        ctx.fillStyle = "#3498db";
+        const t = performance.now() / 200;
+        ctx.beginPath();
+        ctx.arc(x - 12, y - 5 + (t%3)*3, 2, 0, Math.PI*2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x + 12, y - 8 + ((t+1)%3)*3, 2.5, 0, Math.PI*2);
+        ctx.fill();
+    }
+
+    function drawFinishTime(ctx, x, y, timeVal) {
+        const timeStr = timeVal.toString();
+
+        const w = 80;
+        const h = 26;
+        
+        ctx.fillStyle = "#27ae60";
+        ctx.beginPath();
+        ctx.roundRect(x - w/2, y - h/2, w, h, 13);
+        ctx.fill();
+        
+        ctx.fillStyle = "white";
+        ctx.font = "bold 14px Consolas";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(`⏱ ${timeStr}s`, x, y + 1);
+        
+        // Arrow
+        ctx.beginPath();
+        ctx.moveTo(x, y - h/2);
+        ctx.lineTo(x - 5, y - h/2 - 5);
+        ctx.lineTo(x + 5, y - h/2 - 5);
+        ctx.fillStyle = "#27ae60";
+        ctx.fill();
+    }
+
+    // --- 啟動主迴圈 ---
+    loop();
+
+</script>
+
+</body>
+</html>
