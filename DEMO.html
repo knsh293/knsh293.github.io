@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>康軒教育商城 DEMO</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .mega-menu { display: none; opacity: 0; transition: opacity 0.3s ease; }
+        .group:hover .mega-menu { display: block; opacity: 1; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans">
+
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center">
+                <div class="text-2xl font-bold text-red-600 tracking-wider mr-10">康軒教育商城</div>
+                <nav class="hidden md:flex h-full">
+                    <div class="group h-full flex items-center px-4 cursor-pointer hover:text-red-600 border-b-2 border-transparent hover:border-red-600">
+                        <span class="font-medium">學前專區</span>
+                        <div class="mega-menu absolute left-0 top-16 w-full bg-white border-t border-gray-200 shadow-xl z-50 p-6">
+                            <div class="max-w-7xl mx-auto flex gap-12">
+                                <div>
+                                    <h3 class="font-bold text-gray-800 mb-3 border-b pb-2">雜誌訂閱</h3>
+                                    <ul class="space-y-2 text-sm text-gray-600">
+                                        <li class="hover:text-red-500">寶寶版 (1-3歲)</li>
+                                        <li class="hover:text-red-500">幼幼版 (3-5歲)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="group h-full flex items-center px-4 cursor-pointer hover:text-red-600 border-b-2 border-transparent hover:border-red-600">
+                        <span class="font-medium">國小專區</span>
+                        <div class="mega-menu absolute left-0 top-16 w-full bg-white border-t border-gray-200 shadow-xl z-50 p-6">
+                            <div class="max-w-7xl mx-auto flex gap-12">
+                                <div>
+                                    <h3 class="font-bold text-gray-800 mb-3 border-b pb-2">低年級 (1-2年級)</h3>
+                                    <ul class="space-y-2 text-sm text-gray-600">
+                                        <li class="hover:text-red-500">國語/數學/生活 教材</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-gray-800 mb-3 border-b pb-2">中高年級 (3-6年級)</h3>
+                                    <ul class="space-y-2 text-sm text-gray-600">
+                                        <li class="hover:text-red-500">全科自修與評量</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="group h-full flex items-center px-4 cursor-pointer hover:text-red-600 border-b-2 border-transparent hover:border-red-600">
+                        <span class="font-medium">國中專區</span>
+                    </div>
+                    <div class="group h-full flex items-center px-4 cursor-pointer hover:text-red-600 border-b-2 border-transparent hover:border-red-600">
+                        <span class="font-medium">營隊活動</span>
+                    </div>
+                </nav>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="relative">
+                    <input type="text" placeholder="搜尋..." class="w-48 pl-4 pr-10 py-1.5 border border-gray-300 rounded-full text-sm focus:outline-none focus:border-red-500">
+                    <span class="absolute right-3 top-1.5 text-gray-400">🔍</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 py-6">
+        <h1 class="text-2xl font-bold text-gray-800" id="page-title">所有商品</h1>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 pb-12 flex flex-col md:flex-row gap-8">
+        
+        <aside class="w-full md:w-64 flex-shrink-0">
+            <div class="bg-white border border-gray-200 rounded-lg p-5 sticky top-24" id="sidebar-container">
+                </div>
+        </aside>
+
+        <main class="flex-1">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" id="product-grid">
+                </div>
+        </main>
+    </div>
+
+    <script>
+        // 1. 定義四層選項資料
+        const filtersData = {
+            stage: ['學齡前', '國小', '國中'],
+            grade: ['國小先修', '1年級', '2年級', '3年級', '4年級', '5年級', '6年級', '暑期先修'],
+            subject: ['國語', '數學', '自然', '社會', '英語', '生活', '健體', '綜合', '閩南語'],
+            purpose: ['課前先修', '學校進度', '補強練習', '資優挑戰'] // 新增第四層
+        };
+
+        // 2. 定義各步驟要顯示的產品陣列
+        const productsStep0 = ['請從左側選擇學習階段以檢視商品'];
+        
+        // 步驟 1 (選國小)
+        const productsStep1 = ['國小國語1下課本', '國小國語2下課本', '國小國語3下課本', '國小國語4下課本', '國小國語5下課本', '國小國語6下課本', '國小國語1下習作', '國小國語2下習作', '國小國語3下習作'];
+        
+        // 步驟 2 (選1年級)
+        const productsStep2 = ['國小國語1下課本', '國小數學1下課本', '國小生活1下課本', '國小健體1下課本', '國小國語1下習作', '國小數學1下習作'];
+        
+        // 步驟 3 (選數學)
+        const productsStep3 = ['國小數學1下課本', '國小數學1下習作', '國小數學1下附件', '國小數學1下重點複習', '國小數學1下練習簿', '國小數學1下學習自修', '國小數學1下學習評量'];
+
+        // 步驟 4 (選學習目的：動態依照目的給予不同商品)
+        const productsStep4Map = {
+            '課前先修': ['1下數學先修講義 (無版本)', '數學探險島線上動畫課程'],
+            '學校進度': ['國小數學1下課本', '國小數學1下習作', '國小數學1下附件', '國小數學1下練習簿'],
+            '補強練習': ['國小數學1下重點複習', '國小數學1下學習自修', '國小數學1下學習評量'],
+            '資優挑戰': ['奧林匹克小一數學', '資優解題王(1下)', '進階邏輯積木組']
+        };
+
+        // 儲存四層的選擇狀態
+        let currentState = {
+            stage: null,
+            grade: null,
+            subject: null,
+            purpose: null // 新增第四層狀態
+        };
+
+        // --- 渲染側邊欄 ---
+        function renderSidebar() {
+            const container = document.getElementById('sidebar-container');
+            let html = '<h3 class="font-bold text-lg mb-4 pb-2 border-b border-gray-100">篩選條件</h3>';
+
+            // 第一層：學習階段
+            html += generateFilterGroup('學習階段', 'stage', filtersData.stage, true);
+
+            // 第二層：年級 (有選國小才顯示)
+            if (currentState.stage === '國小') {
+                html += generateFilterGroup('年級', 'grade', filtersData.grade, true);
+            }
+
+            // 第三層：科目 (有選1年級才顯示)
+            if (currentState.stage === '國小' && currentState.grade) {
+                html += generateFilterGroup('科目', 'subject', filtersData.subject, true);
+            }
+
+            // 第四層：學習目的 (有選科目才顯示)
+            if (currentState.stage === '國小' && currentState.grade && currentState.subject) {
+                html += generateFilterGroup('學習目的', 'purpose', filtersData.purpose, true);
+            }
+
+            container.innerHTML = html;
+        }
+
+        // --- 產生按鈕群組的輔助函數 ---
+        function generateFilterGroup(title, levelKey, optionsArr, hasBorder) {
+            let borderClass = hasBorder ? 'pt-4 border-t border-gray-100' : '';
+            let html = `
+                <div class="mb-4 ${borderClass}">
+                    <h4 class="font-bold text-gray-800 mb-2 cursor-default">${title}</h4>
+                    <div class="flex flex-wrap gap-2">
+            `;
+            optionsArr.forEach(item => {
+                let isActive = currentState[levelKey] === item;
+                let btnClass = isActive ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-600 hover:border-red-300';
+                html += `
+                    <button onclick="selectFilter('${levelKey}', '${item}')" class="px-3 py-1 text-sm border rounded-full transition-colors ${btnClass}">
+                        ${item}
+                    </button>
+                `;
+            });
+            html += `</div></div>`;
+            return html;
+        }
+
+        // --- 處理篩選點擊事件 ---
+        function selectFilter(level, value) {
+            // 點擊已選中的項目則取消選擇
+            if (currentState[level] === value) {
+                currentState[level] = null;
+            } else {
+                currentState[level] = value;
+            }
+
+            // 【連動清除邏輯】當上層變更時，清空所有下層的選擇
+            if (level === 'stage') {
+                currentState.grade = null;
+                currentState.subject = null;
+                currentState.purpose = null;
+            } else if (level === 'grade') {
+                currentState.subject = null;
+                currentState.purpose = null;
+            } else if (level === 'subject') {
+                currentState.purpose = null;
+            }
+
+            updateTitle();
+            renderSidebar();
+            renderProducts();
+        }
+
+        // --- 更新頁面標題 ---
+        function updateTitle() {
+            let titleParts = [];
+            if(currentState.stage) titleParts.push(currentState.stage);
+            if(currentState.grade) titleParts.push(currentState.grade);
+            if(currentState.subject) titleParts.push(currentState.subject);
+            if(currentState.purpose) titleParts.push(`[${currentState.purpose}]`);
+            
+            document.getElementById('page-title').innerText = titleParts.length > 0 ? titleParts.join(" ") : "所有商品";
+        }
+
+        // --- 渲染商品列表 ---
+        function renderProducts() {
+            const grid = document.getElementById('product-grid');
+            let currentProducts = [];
+
+            // 判斷當前所在的步驟，給予對應的商品陣列
+            if (currentState.stage === '國小') {
+                if (!currentState.grade) {
+                    currentProducts = productsStep1; // 步驟1
+                } else if (currentState.grade === '1年級') {
+                    if (!currentState.subject) {
+                        currentProducts = productsStep2; // 步驟2
+                    } else if (currentState.subject === '數學') {
+                        if (!currentState.purpose) {
+                            currentProducts = productsStep3; // 步驟3
+                        } else {
+                            // 步驟 4：根據學習目的給予精準商品
+                            currentProducts = productsStep4Map[currentState.purpose] || [`尚無符合「${currentState.purpose}」的商品`];
+                        }
+                    } else {
+                        currentProducts = [`目前 DEMO 僅展示「數學」科目的詳細內容`];
+                    }
+                } else {
+                    currentProducts = [`目前 DEMO 僅展示「1年級」的詳細內容`];
+                }
+            } else if (currentState.stage) {
+                currentProducts = [`目前 DEMO 僅展示「國小」的詳細內容`];
+            } else {
+                currentProducts = productsStep0; // 步驟0
+            }
+
+            // 渲染卡片
+            grid.innerHTML = currentProducts.map(productName => {
+                if(productName.includes("選擇") || productName.includes("尚無") || productName.includes("僅展示")) {
+                    return `<div class="col-span-full py-12 text-center text-gray-500 bg-white rounded-lg border border-dashed">${productName}</div>`;
+                }
+
+                // 給不同商品一點顏色標籤的變化 (純粹為視覺豐富度)
+                let tagText = currentState.purpose || "基礎教材";
+                let tagColor = currentState.purpose === '資優挑戰' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600';
+
+                return `
+                    <div class="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow cursor-pointer flex flex-col">
+                        <div class="h-40 bg-gray-50 flex items-center justify-center text-gray-400 font-medium border-b border-gray-100">
+                            封面圖片
+                        </div>
+                        <div class="p-4 flex flex-col flex-1">
+                            <div class="mb-2"><span class="text-[10px] px-2 py-1 rounded ${tagColor}">${tagText}</span></div>
+                            <h2 class="font-bold text-gray-800 text-sm mb-4 leading-relaxed">${productName}</h2>
+                            <div class="mt-auto flex justify-between items-center">
+                                <span class="text-red-600 font-bold">$150</span>
+                                <button class="text-xs bg-red-600 text-white px-3 py-1.5 rounded hover:bg-red-700 transition-colors">加入購物車</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 初始載入
+        renderSidebar();
+        renderProducts();
+    </script>
+</body>
+</html>
