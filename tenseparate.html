@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>貪吃怪獸的糖果罐 - 10的分與合 (動畫版)</title>
+    <title>貪吃怪獸的糖果罐 - 10的分與合 (隱藏問答版)</title>
     <style>
         body {
             font-family: 'Microsoft JhengHei', sans-serif;
@@ -12,7 +12,7 @@
             margin: 0;
             padding: 20px;
             user-select: none;
-            overflow-x: hidden; /* 防止動畫時產生橫向捲軸 */
+            overflow-x: hidden;
         }
         h1 {
             color: #333;
@@ -26,7 +26,7 @@
             border-radius: 20px;
             padding: 30px;
             box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-            position: relative; /* 為了克隆糖果的絕對定位 */
+            position: relative;
         }
         .monsters-area {
             display: flex;
@@ -38,19 +38,19 @@
             padding: 20px;
             border-radius: 15px;
             border: 4px dashed #ccc;
-            position: relative; /* 用於定位內部的靜態糖果 */
+            position: relative; /* 定位隱藏按鈕與糖果區 */
+            transition: all 0.3s ease;
         }
-        .red-monster {
-            background-color: #ffe6e6;
-            border-color: #ff9999;
-        }
-        .blue-monster {
-            background-color: #e6f2ff;
-            border-color: #99ccff;
-        }
-        .monster-icon {
-            font-size: 80px;
-            margin-bottom: 10px;
+        .red-monster { background-color: #ffe6e6; border-color: #ff9999; }
+        .blue-monster { background-color: #e6f2ff; border-color: #99ccff; }
+        
+        .monster-icon { font-size: 80px; margin-bottom: 10px; }
+        
+        /* 糖果顯示區的外層包裝，用來放置神秘蓋子 */
+        .candies-wrapper {
+            position: relative;
+            min-height: 120px;
+            margin-top: 10px;
         }
         .candies-display {
             font-size: 40px;
@@ -60,7 +60,47 @@
             justify-content: center;
             align-content: flex-start;
             gap: 5px;
+            transition: opacity 0.3s;
         }
+        
+        /* 神秘蓋子樣式 */
+        .mystery-cover {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #777;
+            border-radius: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 60px;
+            font-weight: bold;
+            color: white;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.3);
+        }
+
+        /* 當怪獸區塊被設定為隱藏狀態時的變化 */
+        .is-hidden .candies-display { opacity: 0; }
+        .is-hidden .mystery-cover { opacity: 1; pointer-events: auto; }
+
+        /* 隱藏/顯示 切換按鈕 */
+        .toggle-hide-btn {
+            position: absolute;
+            top: 15px; right: 15px;
+            font-size: 16px;
+            padding: 8px 12px;
+            border: 2px solid #ccc;
+            border-radius: 10px;
+            background: #fff;
+            color: #555;
+            cursor: pointer;
+            width: auto;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .toggle-hide-btn:hover { background: #eee; }
+
         .equation {
             font-size: 60px;
             font-weight: bold;
@@ -76,7 +116,7 @@
             justify-content: space-around;
             margin-top: 20px;
         }
-        button {
+        .action-btn {
             font-size: 24px;
             font-weight: bold;
             padding: 15px 30px;
@@ -88,54 +128,51 @@
             transition: transform 0.1s, background-color 0.3s;
             width: 40%;
         }
-        button:active {
-            transform: scale(0.95);
-        }
-        button:disabled {
+        .action-btn:active { transform: scale(0.95); }
+        .action-btn:disabled {
             background-color: #cccccc !important;
             cursor: not-allowed;
             transform: none;
             box-shadow: none;
         }
-        .btn-red {
-            background-color: #ff4d4d;
-        }
-        .btn-red:hover:not(:disabled) {
-            background-color: #ff3333;
-        }
-        .btn-blue {
-            background-color: #3399ff;
-        }
-        .btn-blue:hover:not(:disabled) {
-            background-color: #1a8cff;
-        }
+        .btn-red { background-color: #ff4d4d; }
+        .btn-red:hover:not(:disabled) { background-color: #ff3333; }
+        .btn-blue { background-color: #3399ff; }
+        .btn-blue:hover:not(:disabled) { background-color: #1a8cff; }
         
-        /* 動畫中臨時生成的糖果樣式 */
         .moving-candy {
             position: fixed;
             font-size: 40px;
             z-index: 100;
-            transition: all 0.5s ease; /* 核心動畫屬性，0.5秒移動時間 */
+            transition: all 0.5s ease;
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>🍬 貪吃怪獸的糖果罐 (動畫版) 🍬</h1>
-    <p style="font-size: 20px; color: #666;">總共有 10 顆糖果，你可以把糖果換給不同的怪獸喔！</p>
+    <h1>🍬 貪吃怪獸的糖果罐 (隱藏問答版) 🍬</h1>
+    <p style="font-size: 20px; color: #666;">利用右上角的開關把糖果藏起來，猜猜看裡面有幾顆？</p>
 
     <div class="monsters-area">
-        <div class="monster-box red-monster">
+        <div class="monster-box red-monster" id="red-box">
+            <button class="toggle-hide-btn" id="red-toggle-btn" onclick="toggleHidden('red')">🙈 隱藏</button>
             <div class="monster-icon">👹</div>
             <div style="font-size: 24px; font-weight: bold; color: #cc0000;">紅怪獸</div>
-            <div class="candies-display" id="red-candies"></div>
+            <div class="candies-wrapper">
+                <div class="candies-display" id="red-candies"></div>
+                <div class="mystery-cover">❓</div>
+            </div>
         </div>
 
-        <div class="monster-box blue-monster">
+        <div class="monster-box blue-monster" id="blue-box">
+            <button class="toggle-hide-btn" id="blue-toggle-btn" onclick="toggleHidden('blue')">🙈 隱藏</button>
             <div class="monster-icon">🥶</div>
             <div style="font-size: 24px; font-weight: bold; color: #0066cc;">藍怪獸</div>
-            <div class="candies-display" id="blue-candies"></div>
+            <div class="candies-wrapper">
+                <div class="candies-display" id="blue-candies"></div>
+                <div class="mystery-cover">❓</div>
+            </div>
         </div>
     </div>
 
@@ -144,8 +181,8 @@
     </div>
 
     <div class="controls">
-        <button class="btn-red" id="btn-to-red" onclick="giveToRed()">⬅️ 把一顆糖給紅怪獸</button>
-        <button class="btn-blue" id="btn-to-blue" onclick="giveToBlue()">把一顆糖給藍怪獸 ➡️</button>
+        <button class="action-btn btn-red" id="btn-to-red" onclick="giveToRed()">⬅️ 把一顆糖給紅怪獸</button>
+        <button class="action-btn btn-blue" id="btn-to-blue" onclick="giveToBlue()">把一顆糖給藍怪獸 ➡️</button>
     </div>
 </div>
 
@@ -154,6 +191,10 @@
     const TOTAL_CANDIES = 10;
     let redCount = 5;
     let blueCount = 5;
+    
+    // 隱藏狀態變數
+    let isRedHidden = false;
+    let isBlueHidden = false;
 
     const candyEmoji = "🍬";
 
@@ -164,43 +205,40 @@
     const btnToRed = document.getElementById('btn-to-red');
     const btnToBlue = document.getElementById('btn-to-blue');
 
-    // 繪製畫面的主要函數
-    function updateUI() {
-        // 更新紅色怪獸的糖果
-        updateCandiesDOM(redCandiesDiv, redCount);
-        
-        // 更新藍色怪獸的糖果
-        updateCandiesDOM(blueCandiesDiv, blueCount);
-        
-        // 更新數學算式
-        equationDisplay.innerHTML = `<span style="color:#cc0000">${redCount}</span> + <span style="color:#0066cc">${blueCount}</span> = 10`;
-
-        // 判斷按鈕是否可以點擊 (當一方已經是0時，就不能再拿走糖果)
-        if (blueCount === 0) {
-            btnToRed.disabled = true;
+    // 切換隱藏狀態的函數
+    function toggleHidden(color) {
+        if (color === 'red') {
+            isRedHidden = !isRedHidden;
+            document.getElementById('red-box').classList.toggle('is-hidden', isRedHidden);
+            document.getElementById('red-toggle-btn').innerHTML = isRedHidden ? '👁️ 顯示' : '🙈 隱藏';
         } else {
-            btnToRed.disabled = false;
+            isBlueHidden = !isBlueHidden;
+            document.getElementById('blue-box').classList.toggle('is-hidden', isBlueHidden);
+            document.getElementById('blue-toggle-btn').innerHTML = isBlueHidden ? '👁️ 顯示' : '🙈 隱藏';
         }
-
-        if (redCount === 0) {
-            btnToBlue.disabled = true;
-        } else {
-            btnToBlue.disabled = false;
-        }
+        updateUI(); // 更新算式顯示
     }
 
-    // 輔助函數：更新盤子內的靜態糖果 DOM
-    function updateCandiesDOM(container, count) {
-        // 為了動畫能獲取單顆糖果的位置，我們不能只使用 repeat
-        // 而是要手動管理單個 DOM 元素
-        let currentCandies = container.getElementsByClassName('candy-item');
+    // 繪製畫面的主要函數
+    function updateUI() {
+        updateCandiesDOM(redCandiesDiv, redCount);
+        updateCandiesDOM(blueCandiesDiv, blueCount);
         
-        // 如果太多，移除
+        // 判斷算式要顯示數字還是問號
+        const redText = isRedHidden ? '？' : redCount;
+        const blueText = isBlueHidden ? '？' : blueCount;
+        equationDisplay.innerHTML = `<span style="color:#cc0000">${redText}</span> + <span style="color:#0066cc">${blueText}</span> = 10`;
+
+        // 按鈕防呆
+        btnToRed.disabled = (blueCount === 0);
+        btnToBlue.disabled = (redCount === 0);
+    }
+
+    function updateCandiesDOM(container, count) {
+        let currentCandies = container.getElementsByClassName('candy-item');
         while (currentCandies.length > count) {
             container.removeChild(currentCandies[currentCandies.length - 1]);
         }
-        
-        // 如果太少，補上
         while (currentCandies.length < count) {
             const span = document.createElement('span');
             span.className = 'candy-item';
@@ -209,7 +247,6 @@
         }
     }
 
-    // 獲取元素相對於網頁的絕對坐標 (x, y)
     function getAbsolutePosition(element) {
         const rect = element.getBoundingClientRect();
         return {
@@ -218,82 +255,58 @@
         };
     }
 
-    // 執行動畫的函數
-    // isMovingToRed: 布林值，true 表示從藍飛到紅
+    // 動畫核心函數 (即使目標是隱藏的，getBoundingClientRect 依然能取得正確座標)
     function animateCandyMove(isMovingToRed, onComplete) {
-        // 1. 決定起始點 and 終點
-        let fromContainer, toContainer, startNode, endNode;
+        let fromContainer = isMovingToRed ? blueCandiesDiv : redCandiesDiv;
+        let toContainer = isMovingToRed ? redCandiesDiv : blueCandiesDiv;
 
-        if (isMovingToRed) {
-            fromContainer = blueCandiesDiv;
-            toContainer = redCandiesDiv;
-        } else {
-            fromContainer = redCandiesDiv;
-            toContainer = blueCandiesDiv;
-        }
+        let startNode = fromContainer.getElementsByClassName('candy-item');
+        let endNode = toContainer.getElementsByClassName('candy-item');
 
-        startNode = fromContainer.getElementsByClassName('candy-item');
-        endNode = toContainer.getElementsByClassName('candy-item');
-
-        // 2. 如果沒有糖果可移動，退出
         if (startNode.length === 0) return;
 
-        // 3. 克隆一顆糖果用於移動
         const movingCandyClone = document.createElement('span');
         movingCandyClone.innerHTML = candyEmoji;
         movingCandyClone.className = 'moving-candy';
         document.body.appendChild(movingCandyClone);
 
-        // 4. 計算起始和終點的絕對坐標
-        // 起點：fromContainer 的最後一顆糖果
         const startPos = getAbsolutePosition(startNode[startNode.length - 1]);
         
-        // 終點：toContainer 的下一個空位 (這是一個估算值)
-        // 如果 toContainer 已有糖果，使用最後一個糖果的位置加上一點偏移量
         let endPos;
         if (endNode.length > 0) {
             endPos = getAbsolutePosition(endNode[endNode.length - 1]);
-            endPos.x += isMovingToRed ? -45 : 45; // 左右飛的方向不同，偏移也不同
+            endPos.x += isMovingToRed ? -45 : 45;
         } else {
-            // 如果目標罐子空了，則使用罐子的中心點
             endPos = getAbsolutePosition(toContainer);
-            endPos.x += toContainer.offsetWidth / 2 - 20; // 減去糖果的一半寬度
-            endPos.y += toContainer.offsetHeight / 2 - 20; // 減去糖果的一半高度
+            endPos.x += toContainer.offsetWidth / 2 - 20;
+            endPos.y += toContainer.offsetHeight / 2 - 20;
         }
 
-        // 5. 將克隆糖果絕對定位於起點，並**在 DOM 中移除原來的靜態糖果**
-        // 這一步很關鍵：讓用戶感覺是這顆糖果飛走了
         movingCandyClone.style.left = `${startPos.x}px`;
         movingCandyClone.style.top = `${startPos.y}px`;
         fromContainer.removeChild(startNode[startNode.length - 1]);
 
-        // 6. 動畫開始：等待一小段時間讓 DOM 重新渲染，然後更改克隆糖果的位置
         requestAnimationFrame(() => {
-            // 這會觸發 CSS transition
             movingCandyClone.style.left = `${endPos.x}px`;
             movingCandyClone.style.top = `${endPos.y}px`;
         });
 
-        // 7. 動畫結束後的清理工作
         movingCandyClone.addEventListener('transitionend', () => {
             document.body.removeChild(movingCandyClone);
-            if (onComplete) onComplete(); // 執行後續的數據更新和UI重繪
+            if (onComplete) onComplete();
         });
     }
 
-    // 將一顆糖從藍怪獸換給紅怪獸
     function giveToRed() {
         if (blueCount > 0) {
-            // 先執行動畫，動畫完成後再更新數據和UI
             animateCandyMove(true, () => {
                 blueCount--;
                 redCount++;
-                updateUI(); // 這會重新繪製算式和按鈕狀態，但因為糖果 DOM 已經被 remove 了，所以看起來很順暢
+                updateUI();
             });
         }
     }
 
-    // 將一顆糖從紅怪獸換給藍怪獸
     function giveToBlue() {
         if (redCount > 0) {
             animateCandyMove(false, () => {
@@ -304,7 +317,7 @@
         }
     }
 
-    // 網頁載入時先執行一次畫面更新
+    // 初始化
     updateUI();
 </script>
 
