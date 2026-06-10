@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>貪吃怪獸的糖果罐 - 10的分與合 (隱藏問答版)</title>
+    <style>
+        body {
+            font-family: 'Microsoft JhengHei', sans-serif;
+            background-color: #f0f8ff;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+            user-select: none;
+            overflow-x: hidden;
+        }
+        h1 {
+            color: #333;
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        .monsters-area {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+        }
+        .monster-box {
+            width: 45%;
+            padding: 20px;
+            border-radius: 15px;
+            border: 4px dashed #ccc;
+            position: relative; /* 定位隱藏按鈕與糖果區 */
+            transition: all 0.3s ease;
+        }
+        .red-monster { background-color: #ffe6e6; border-color: #ff9999; }
+        .blue-monster { background-color: #e6f2ff; border-color: #99ccff; }
+        
+        .monster-icon { font-size: 80px; margin-bottom: 10px; }
+        
+        /* 糖果顯示區的外層包裝，用來放置神秘蓋子 */
+        .candies-wrapper {
+            position: relative;
+            min-height: 120px;
+            margin-top: 10px;
+        }
+        .candies-display {
+            font-size: 40px;
+            min-height: 120px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-content: flex-start;
+            gap: 5px;
+            transition: opacity 0.3s;
+        }
+        
+        /* 神秘蓋子樣式 */
+        .mystery-cover {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #777;
+            border-radius: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 60px;
+            font-weight: bold;
+            color: white;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.3);
+        }
+
+        /* 當怪獸區塊被設定為隱藏狀態時的變化 */
+        .is-hidden .candies-display { opacity: 0; }
+        .is-hidden .mystery-cover { opacity: 1; pointer-events: auto; }
+
+        /* 隱藏/顯示 切換按鈕 */
+        .toggle-hide-btn {
+            position: absolute;
+            top: 15px; right: 15px;
+            font-size: 16px;
+            padding: 8px 12px;
+            border: 2px solid #ccc;
+            border-radius: 10px;
+            background: #fff;
+            color: #555;
+            cursor: pointer;
+            width: auto;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .toggle-hide-btn:hover { background: #eee; }
+
+        .equation {
+            font-size: 60px;
+            font-weight: bold;
+            color: #444;
+            margin: 20px 0;
+            background: #fff3cd;
+            border-radius: 15px;
+            padding: 10px;
+            border: 3px solid #ffeeba;
+        }
+        .controls {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+        .action-btn {
+            font-size: 24px;
+            font-weight: bold;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            color: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            transition: transform 0.1s, background-color 0.3s;
+            width: 40%;
+        }
+        .action-btn:active { transform: scale(0.95); }
+        .action-btn:disabled {
+            background-color: #cccccc !important;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .btn-red { background-color: #ff4d4d; }
+        .btn-red:hover:not(:disabled) { background-color: #ff3333; }
+        .btn-blue { background-color: #3399ff; }
+        .btn-blue:hover:not(:disabled) { background-color: #1a8cff; }
+        
+        .moving-candy {
+            position: fixed;
+            font-size: 40px;
+            z-index: 100;
+            transition: all 0.5s ease;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🍬 貪吃怪獸的糖果罐 (隱藏問答版) 🍬</h1>
+    <p style="font-size: 20px; color: #666;">利用右上角的開關把糖果藏起來，猜猜看裡面有幾顆？</p>
+
+    <div class="monsters-area">
+        <div class="monster-box red-monster" id="red-box">
+            <button class="toggle-hide-btn" id="red-toggle-btn" onclick="toggleHidden('red')">🙈 隱藏</button>
+            <div class="monster-icon">👹</div>
+            <div style="font-size: 24px; font-weight: bold; color: #cc0000;">紅怪獸</div>
+            <div class="candies-wrapper">
+                <div class="candies-display" id="red-candies"></div>
+                <div class="mystery-cover">❓</div>
+            </div>
+        </div>
+
+        <div class="monster-box blue-monster" id="blue-box">
+            <button class="toggle-hide-btn" id="blue-toggle-btn" onclick="toggleHidden('blue')">🙈 隱藏</button>
+            <div class="monster-icon">🥶</div>
+            <div style="font-size: 24px; font-weight: bold; color: #0066cc;">藍怪獸</div>
+            <div class="candies-wrapper">
+                <div class="candies-display" id="blue-candies"></div>
+                <div class="mystery-cover">❓</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="equation" id="equation-display">
+        5 + 5 = 10
+    </div>
+
+    <div class="controls">
+        <button class="action-btn btn-red" id="btn-to-red" onclick="giveToRed()">⬅️ 把一顆糖給紅怪獸</button>
+        <button class="action-btn btn-blue" id="btn-to-blue" onclick="giveToBlue()">把一顆糖給藍怪獸 ➡️</button>
+    </div>
+</div>
+
+<script>
+    // 初始狀態設定
+    const TOTAL_CANDIES = 10;
+    let redCount = 5;
+    let blueCount = 5;
+    
+    // 隱藏狀態變數
+    let isRedHidden = false;
+    let isBlueHidden = false;
+
+    const candyEmoji = "🍬";
+
+    // 取得 DOM 元素
+    const redCandiesDiv = document.getElementById('red-candies');
+    const blueCandiesDiv = document.getElementById('blue-candies');
+    const equationDisplay = document.getElementById('equation-display');
+    const btnToRed = document.getElementById('btn-to-red');
+    const btnToBlue = document.getElementById('btn-to-blue');
+
+    // 切換隱藏狀態的函數
+    function toggleHidden(color) {
+        if (color === 'red') {
+            isRedHidden = !isRedHidden;
+            document.getElementById('red-box').classList.toggle('is-hidden', isRedHidden);
+            document.getElementById('red-toggle-btn').innerHTML = isRedHidden ? '👁️ 顯示' : '🙈 隱藏';
+        } else {
+            isBlueHidden = !isBlueHidden;
+            document.getElementById('blue-box').classList.toggle('is-hidden', isBlueHidden);
+            document.getElementById('blue-toggle-btn').innerHTML = isBlueHidden ? '👁️ 顯示' : '🙈 隱藏';
+        }
+        updateUI(); // 更新算式顯示
+    }
+
+    // 繪製畫面的主要函數
+    function updateUI() {
+        updateCandiesDOM(redCandiesDiv, redCount);
+        updateCandiesDOM(blueCandiesDiv, blueCount);
+        
+        // 判斷算式要顯示數字還是問號
+        const redText = isRedHidden ? '？' : redCount;
+        const blueText = isBlueHidden ? '？' : blueCount;
+        equationDisplay.innerHTML = `<span style="color:#cc0000">${redText}</span> + <span style="color:#0066cc">${blueText}</span> = 10`;
+
+        // 按鈕防呆
+        btnToRed.disabled = (blueCount === 0);
+        btnToBlue.disabled = (redCount === 0);
+    }
+
+    function updateCandiesDOM(container, count) {
+        let currentCandies = container.getElementsByClassName('candy-item');
+        while (currentCandies.length > count) {
+            container.removeChild(currentCandies[currentCandies.length - 1]);
+        }
+        while (currentCandies.length < count) {
+            const span = document.createElement('span');
+            span.className = 'candy-item';
+            span.innerHTML = candyEmoji;
+            container.appendChild(span);
+        }
+    }
+
+    function getAbsolutePosition(element) {
+        const rect = element.getBoundingClientRect();
+        return {
+            x: rect.left + window.scrollX,
+            y: rect.top + window.scrollY
+        };
+    }
+
+    // 動畫核心函數 (即使目標是隱藏的，getBoundingClientRect 依然能取得正確座標)
+    function animateCandyMove(isMovingToRed, onComplete) {
+        let fromContainer = isMovingToRed ? blueCandiesDiv : redCandiesDiv;
+        let toContainer = isMovingToRed ? redCandiesDiv : blueCandiesDiv;
+
+        let startNode = fromContainer.getElementsByClassName('candy-item');
+        let endNode = toContainer.getElementsByClassName('candy-item');
+
+        if (startNode.length === 0) return;
+
+        const movingCandyClone = document.createElement('span');
+        movingCandyClone.innerHTML = candyEmoji;
+        movingCandyClone.className = 'moving-candy';
+        document.body.appendChild(movingCandyClone);
+
+        const startPos = getAbsolutePosition(startNode[startNode.length - 1]);
+        
+        let endPos;
+        if (endNode.length > 0) {
+            endPos = getAbsolutePosition(endNode[endNode.length - 1]);
+            endPos.x += isMovingToRed ? -45 : 45;
+        } else {
+            endPos = getAbsolutePosition(toContainer);
+            endPos.x += toContainer.offsetWidth / 2 - 20;
+            endPos.y += toContainer.offsetHeight / 2 - 20;
+        }
+
+        movingCandyClone.style.left = `${startPos.x}px`;
+        movingCandyClone.style.top = `${startPos.y}px`;
+        fromContainer.removeChild(startNode[startNode.length - 1]);
+
+        requestAnimationFrame(() => {
+            movingCandyClone.style.left = `${endPos.x}px`;
+            movingCandyClone.style.top = `${endPos.y}px`;
+        });
+
+        movingCandyClone.addEventListener('transitionend', () => {
+            document.body.removeChild(movingCandyClone);
+            if (onComplete) onComplete();
+        });
+    }
+
+    function giveToRed() {
+        if (blueCount > 0) {
+            animateCandyMove(true, () => {
+                blueCount--;
+                redCount++;
+                updateUI();
+            });
+        }
+    }
+
+    function giveToBlue() {
+        if (redCount > 0) {
+            animateCandyMove(false, () => {
+                redCount--;
+                blueCount++;
+                updateUI();
+            });
+        }
+    }
+
+    // 初始化
+    updateUI();
+</script>
+
+</body>
+</html>
