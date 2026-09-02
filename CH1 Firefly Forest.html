@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>螢火蟲之森 - 認知訓練 V6</title>
+    <title>螢火蟲之森 - 認知訓練 V9</title>
     <style>
         * { box-sizing: border-box; user-select: none; }
         body {
@@ -52,14 +52,32 @@
         }
         .start-btn:hover { background: #85f515; transform: scale(1.1); }
 
+        /* L3 重新開始按鈕覆蓋層 */
+        #restart-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center;
+            z-index: 180;
+        }
+        .restart-btn {
+            padding: 15px 50px; font-size: 5vh; font-weight: bold; border-radius: 50px;
+            background: #FF6B6B; color: #111; border: none; cursor: pointer;
+            box-shadow: 0 0 20px #FF6B6B; transition: 0.2s;
+        }
+        .restart-btn:hover { background: #ff4c4c; transform: scale(1.1); }
+
         /* 遊戲區域 */
         #game-area { position: absolute; width: 100%; height: 75%; top: 0; left: 0; z-index: 10; }
         .entity { position: absolute; transform: translate(-50%, -50%); cursor: pointer; }
         
+        /* 螢火蟲 */
         .firefly {
             width: 2.5vh; height: 2.5vh; border-radius: 50%; background: #eaffcc;
             box-shadow: 0 0 10px 5px rgba(170, 255, 0, 0.8), 0 0 25px 15px rgba(112, 224, 0, 0.6);
             transition: top 2s ease-in-out, left 2s ease-in-out;
+        }
+        .firefly::before {
+            content: ''; position: absolute;
+            top: -3vh; left: -3vh; right: -3vh; bottom: -3vh; border-radius: 50%;
         }
         
         /* 捕捉後在生態箱內的樣式 */
@@ -67,21 +85,31 @@
             width: 7.5vh !important; height: 7.5vh !important;
             box-shadow: 0 0 20px 10px rgba(170, 255, 0, 0.8), 0 0 40px 20px rgba(112, 224, 0, 0.6) !important;
         }
-        .l5-firefly { position: absolute !important; transition: none !important; opacity: 1 !important; }
+        .l5-firefly { position: absolute !important; transition: none !important; opacity: 1 !important; z-index: 90 !important; }
+
+        body.drawing-mode .l5-firefly, body.drawing-mode #eco-box .firefly {
+            pointer-events: none !important;
+        }
 
         .trail-particle {
             position: absolute; border-radius: 50%; background: #aaff00;
             box-shadow: 0 0 8px 2px #70e000; pointer-events: none;
             animation: sparklerFade 0.6s forwards; z-index: 5;
         }
+        .toxic-trail { background: #00b4d8; box-shadow: 0 0 8px 2px #0077b6; }
         @keyframes sparklerFade { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(0); opacity: 0; } }
 
-        .tree-branch {
-            position: absolute; width: 10vh; height: 1.5vh; background: #4A2E15; 
-            border-radius: 10px; box-shadow: 2px 2px 5px rgba(0,0,0,0.5); transform: translate(-50%, -50%);
+        /* 藍色有毒螢火蟲 */
+        .toxic-firefly {
+            width: 6vh; height: 6vh; transition: top 2s ease-in-out, left 2s ease-in-out;
+            display: flex; justify-content: center; align-items: center;
         }
-        .owl { font-size: 5vh; transition: 0.2s; }
-        .owl.angry { transform: translate(-50%, -50%) scale(1.3) rotate(15deg); }
+        .toxic-body {
+            width: 5vh; height: 5vh;
+            animation: spin 3s linear infinite; filter: drop-shadow(0 0 8px #0077b6);
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .toxic-shock { transform: translate(-50%, -50%) scale(1.5); transition: 0.2s; }
 
         /* 生態箱 */
         #eco-box-container {
@@ -89,11 +117,22 @@
             background: rgba(255, 255, 255, 0.1); border-top: 3px solid rgba(112, 224, 0, 0.5);
             backdrop-filter: blur(5px); z-index: 80; display: flex; justify-content: center; align-items: center;
         }
+        /* 顯示箱內按鈕 */
+        #toggle-box-btn {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: #112; color: #70e000; border: 4px solid #70e000;
+            padding: 15px 40px; border-radius: 15px; cursor: pointer;
+            font-size: 4vh; font-weight: bold; z-index: 100; transition: 0.2s;
+            box-shadow: 0 0 20px rgba(112, 224, 0, 0.5);
+        }
+        #toggle-box-btn:hover { background: #70e000; color: #111; transform: translate(-50%, -50%) scale(1.05); }
+        
         #eco-box {
             width: 80%; height: 100%; padding: 1.5vh; border: 2px dashed rgba(255,255,255,0.3); border-radius: 15px;
             display: grid; grid-template-columns: repeat(5, 7.5vh); gap: 1.5vh 3vh; 
-            justify-content: center; align-content: center;
+            justify-content: center; align-content: center; transition: 0.3s;
         }
+        #eco-box.hidden-contents .firefly { visibility: hidden; }
 
         /* 作答框與數字鍵盤 */
         #answer-panel {
@@ -161,7 +200,6 @@
         .home-star.active { color: #FFD700; text-shadow: 0 0 10px #FFD700; }
 
         .hidden { display: none !important; }
-        
         .opacity-0 { opacity: 0 !important; }
         .firefly.caught {
             position: relative; top: auto !important; left: auto !important;
@@ -179,7 +217,7 @@
         <div class="level-grid">
             <button class="level-btn" onclick="startLevel(1)"><div class="home-star" id="home-star-1">☆</div>1<div class="level-title">隨機抓抓樂</div></button>
             <button class="level-btn" onclick="startLevel(2)"><div class="home-star" id="home-star-2">☆</div>2<div class="level-title">滿天星追蹤</div></button>
-            <button class="level-btn" onclick="startLevel(3)"><div class="home-star" id="home-star-3">☆</div>3<div class="level-title">貓頭鷹來亂</div></button>
+            <button class="level-btn" onclick="startLevel(3)"><div class="home-star" id="home-star-3">☆</div>3<div class="level-title">危險的藍光</div></button>
             <button class="level-btn" onclick="startLevel(4)"><div class="home-star" id="home-star-4">☆</div>4<div class="level-title">閃電捉迷藏</div></button>
             <button class="level-btn" onclick="startLevel(5)"><div class="home-star" id="home-star-5">☆</div>5<div class="level-title">星空大畫家</div></button>
         </div>
@@ -209,11 +247,16 @@
         <button class="start-btn" onclick="beginL4()">開始</button>
     </div>
 
+    <div id="restart-overlay" class="hidden">
+        <button class="restart-btn" onclick="restartLevel3()">重新開始</button>
+    </div>
+
     <canvas id="drawing-canvas"></canvas>
     <div id="game-area"></div>
 
     <div id="eco-box-container" class="hidden">
-        <div id="eco-box"></div>
+        <button id="toggle-box-btn" class="hidden" onclick="showEcoBox()">顯示箱內</button>
+        <div id="eco-box" class="hidden-contents"></div>
     </div>
 
     <div id="answer-panel" class="hidden">
@@ -244,6 +287,8 @@
         moveInterval: null,
         trailInterval: null,
         l4Timeout: null,
+        winTimeout: null,
+        feedbackTimeout: null,
         isDrawingMode: false,
         draggedObj: null,
         sequenceId: 0 
@@ -251,8 +296,10 @@
 
     const DOM = {
         home: document.getElementById('home-screen'),
+        gameBoard: document.getElementById('game-board'),
         gameArea: document.getElementById('game-area'),
         ecoBoxContainer: document.getElementById('eco-box-container'),
+        toggleBoxBtn: document.getElementById('toggle-box-btn'),
         ecoBox: document.getElementById('eco-box'),
         controls: document.getElementById('controls-layer'),
         instruction: document.getElementById('instruction'),
@@ -263,6 +310,7 @@
         modeToggle: document.getElementById('mode-toggle'),
         canvas: document.getElementById('drawing-canvas'),
         startOverlay: document.getElementById('start-overlay'),
+        restartOverlay: document.getElementById('restart-overlay'),
         recallBtn: document.getElementById('recall-btn')
     };
 
@@ -272,23 +320,39 @@
     function getRandom(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
     
     function showFeedback(text, color, duration = 1500) {
+        clearTimeout(state.feedbackTimeout); // 清除舊的回饋計時，避免互相覆蓋
         DOM.feedback.innerText = text; DOM.feedback.style.color = color;
         DOM.feedback.style.opacity = 1;
-        setTimeout(() => DOM.feedback.style.opacity = 0, duration);
+        if (duration < 999999) {
+            state.feedbackTimeout = setTimeout(() => DOM.feedback.style.opacity = 0, duration);
+        }
+    }
+
+    function showEcoBox() {
+        DOM.ecoBox.classList.remove('hidden-contents');
+        DOM.toggleBoxBtn.classList.add('hidden');
     }
 
     function goHome() {
+        // 全面清除所有進行中的倒數與計時，防止 Bug
         clearInterval(state.moveInterval); clearInterval(state.trailInterval);
-        clearTimeout(state.l4Timeout); state.sequenceId++; 
+        clearTimeout(state.l4Timeout); clearTimeout(state.winTimeout); clearTimeout(state.feedbackTimeout);
+        state.sequenceId++; 
 
+        DOM.feedback.style.opacity = 0; DOM.feedback.innerText = ''; // 強制關閉提示文字
+        
         DOM.home.classList.remove('hidden'); DOM.controls.style.display = 'none';
         DOM.ecoBoxContainer.classList.add('hidden'); DOM.answerPanel.classList.add('hidden');
-        DOM.startOverlay.classList.add('hidden');
+        DOM.startOverlay.classList.add('hidden'); DOM.restartOverlay.classList.add('hidden');
         
         DOM.modeToggle.style.display = 'none'; state.isDrawingMode = false;
+        document.body.classList.remove('drawing-mode');
         DOM.canvas.style.pointerEvents = 'none'; DOM.modeToggle.innerText = "目前：拖曳模式 ✋";
         
         DOM.gameArea.innerHTML = ''; DOM.ecoBox.innerHTML = ''; DOM.instruction.innerText = '';
+        
+        document.querySelectorAll('#game-board > .l5-firefly').forEach(el => el.remove());
+        
         DOM.gameArea.style.pointerEvents = 'auto'; 
         ctx.clearRect(0, 0, DOM.canvas.width, DOM.canvas.height);
         updateStars();
@@ -311,39 +375,49 @@
         state.targetCount = (level === 1) ? getRandom(2, 5) : 
                             (level === 2) ? getRandom(6, 10) :
                             (level === 3) ? getRandom(4, 7) :
-                            (level === 4) ? getRandom(3, 6) : getRandom(5, 8); 
+                            (level === 4) ? getRandom(3, 6) : 10;
                             
         DOM.home.classList.add('hidden'); DOM.ecoBoxContainer.classList.remove('hidden');
-        DOM.answerPanel.classList.add('hidden'); DOM.answerBox.innerText = '?';
-        DOM.numpad.style.display = 'none'; DOM.recallBtn.classList.add('hidden'); 
+        DOM.answerBox.innerText = '?'; DOM.numpad.style.display = 'none'; DOM.recallBtn.classList.add('hidden'); 
+        DOM.restartOverlay.classList.add('hidden');
         
         DOM.gameArea.innerHTML = ''; DOM.ecoBox.innerHTML = '';
         DOM.gameArea.style.pointerEvents = 'auto'; 
         ctx.clearRect(0, 0, DOM.canvas.width, DOM.canvas.height); resizeCanvas();
 
-        if (level === 1) DOM.instruction.innerText = "點擊螢火蟲捕捉到生態箱！";
-        if (level === 2) DOM.instruction.innerText = "好多螢火蟲！全部找出來！";
-        if (level === 3) DOM.instruction.innerText = "噓...不要點到貓頭鷹，只抓螢火蟲喔！";
-        
-        if (level === 4) {
-            DOM.instruction.innerText = "注意看！牠們會一隻一隻出現然後隱形！";
-            DOM.startOverlay.classList.remove('hidden');
-            DOM.controls.style.display = 'none';
-        } else if (level === 5) {
-            DOM.instruction.innerText = "發揮想像力！把螢火蟲拖出來排圖案！";
+        if (level === 5) {
+            DOM.instruction.innerText = "發揮想像力，把螢火蟲拖出來排成圖案，你用幾隻螢火蟲排圖案呢？";
+            DOM.answerPanel.classList.remove('hidden');
+            DOM.toggleBoxBtn.classList.add('hidden'); 
+            DOM.ecoBox.classList.remove('hidden-contents');
             DOM.modeToggle.style.display = 'block'; state.isDrawingMode = false;
+            document.body.classList.remove('drawing-mode');
             DOM.modeToggle.innerText = "目前：拖曳模式 ✋"; DOM.canvas.style.pointerEvents = 'none';
             spawnForLevel5(); DOM.controls.style.display = 'flex';
         } else {
-            DOM.controls.style.display = 'flex';
-            spawnEntities(level); startErraticMovement(); startSparklerTrail();
+            DOM.answerPanel.classList.add('hidden'); 
+            DOM.toggleBoxBtn.classList.remove('hidden'); 
+            DOM.ecoBox.classList.add('hidden-contents');
+            
+            if (level === 1) DOM.instruction.innerText = "點擊螢火蟲捕捉到生態箱！邊捉邊數，共有幾隻？";
+            if (level === 2) DOM.instruction.innerText = "好多螢火蟲！全部找出來！邊捉邊數，共有幾隻？";
+            if (level === 3) DOM.instruction.innerText = "小心！藍色的是有毒螢火蟲，千萬不要摸到！";
+            
+            if (level === 4) {
+                DOM.instruction.innerText = "注意看！牠們會一隻一隻出現然後隱形！";
+                DOM.startOverlay.classList.remove('hidden');
+                DOM.controls.style.display = 'none';
+            } else {
+                DOM.controls.style.display = 'flex';
+                spawnEntities(level); startErraticMovement(); startSparklerTrail();
+            }
         }
     }
 
     function spawnEntities(level) {
         for(let i=0; i<state.targetCount; i++) createFirefly(false);
         if(level === 3) {
-            for(let i=0; i<getRandom(3, 5); i++) createOwl();
+            for(let i=0; i<getRandom(3, 5); i++) createToxicFirefly();
         }
     }
 
@@ -351,7 +425,7 @@
         let el = document.createElement('div'); el.className = 'entity firefly';
         if(isHiddenInit) {
             el.classList.add('opacity-0');
-            el.style.pointerEvents = 'none'; // 防治 L4 一開始亂點黑色畫面就抓到
+            el.style.pointerEvents = 'none'; 
         }
         el.style.left = getRandom(10, 90) + '%'; el.style.top = getRandom(10, 85) + '%';
         
@@ -361,42 +435,69 @@
     }
 
     function catchFirefly(el) {
-        if(state.currentLevel === 5) return;
-        if(el.classList.contains('caught')) return;
+        if(state.currentLevel === 5 || el.classList.contains('caught')) return;
         
         el.classList.add('caught'); el.classList.remove('opacity-0');
         DOM.ecoBox.appendChild(el);
         state.caughtCount++;
 
-        // 若 L4 全部抓完，關閉呼喚按鈕
         if(state.currentLevel === 4 && state.caughtCount === state.targetCount) {
             DOM.recallBtn.disabled = true;
         }
 
         if(state.caughtCount === state.targetCount && state.currentLevel !== 5) {
             DOM.answerPanel.classList.remove('hidden');
-            showFeedback("收集完成！請點擊右下角作答框輸入數量！", "#FFD700", 2500);
+            // 修改提示語，讓文字更明確
+            showFeedback("收集完成，如果忘記數量，可以按「顯示箱內」按鈕", "#FFD700", 3500);
         }
     }
 
-    function createOwl() {
-        let left = getRandom(15, 85) + '%'; let top = getRandom(15, 75) + '%';
-        let branch = document.createElement('div'); branch.className = 'entity tree-branch';
-        branch.style.left = left; branch.style.top = `calc(${top} + 2.5vh)`;
-        let owl = document.createElement('div'); owl.className = 'entity owl';
-        owl.innerText = '🦉'; owl.style.left = left; owl.style.top = top;
-        owl.addEventListener('mousedown', () => {
-            owl.classList.add('angry'); showFeedback("那是貓頭鷹！", "#FF6B6B", 1000);
-            setTimeout(() => owl.classList.remove('angry'), 500);
-        });
-        DOM.gameArea.appendChild(branch); DOM.gameArea.appendChild(owl);
+    function createToxicFirefly() {
+        let el = document.createElement('div'); el.className = 'entity toxic-firefly';
+        el.style.left = getRandom(10, 90) + '%'; el.style.top = getRandom(10, 80) + '%';
+        let body = document.createElement('div'); body.className = 'toxic-body';
+        
+        body.innerHTML = `<svg viewBox="0 0 100 100" width="100%" height="100%">
+            <circle cx="50" cy="50" r="22" fill="#00b4d8" />
+            <polygon points="45,28 55,28 50,0" fill="#00b4d8"/>
+            <polygon points="45,72 55,72 50,100" fill="#00b4d8"/>
+            <polygon points="28,45 28,55 0,50" fill="#00b4d8"/>
+            <polygon points="72,45 72,55 100,50" fill="#00b4d8"/>
+            <polygon points="35,30 30,35 15,15" fill="#00b4d8"/>
+            <polygon points="65,30 70,35 85,15" fill="#00b4d8"/>
+            <polygon points="35,70 30,65 15,85" fill="#00b4d8"/>
+            <polygon points="65,70 70,65 85,85" fill="#00b4d8"/>
+        </svg>`;
+        
+        el.appendChild(body);
+        el.addEventListener('mousedown', () => catchToxic(el));
+        el.addEventListener('touchstart', (e) => { e.preventDefault(); catchToxic(el); }, {passive:false});
+        DOM.gameArea.appendChild(el);
+    }
+    
+    // 第 3 關抓錯機制 (凍結與重來)
+    function catchToxic(el) {
+        clearInterval(state.moveInterval);
+        clearInterval(state.trailInterval);
+        // 凍結所有點擊
+        document.querySelectorAll('#game-area .entity').forEach(e => e.style.pointerEvents = 'none');
+        
+        showFeedback("哎呀！摸到有毒的了！", "#FF6B6B", 999999);
+        el.classList.add('toxic-shock');
+        DOM.restartOverlay.classList.remove('hidden');
+    }
+
+    function restartLevel3() {
+        DOM.restartOverlay.classList.add('hidden');
+        DOM.feedback.style.opacity = 0;
+        startLevel(3);
     }
 
     function startErraticMovement() {
         clearInterval(state.moveInterval);
         state.moveInterval = setInterval(() => {
-            document.querySelectorAll('#game-area .firefly:not(.opacity-0)').forEach(f => {
-                f.style.top = getRandom(10, 85) + '%'; f.style.left = getRandom(10, 90) + '%';
+            document.querySelectorAll('#game-area .firefly:not(.opacity-0), #game-area .toxic-firefly').forEach(f => {
+                f.style.top = getRandom(10, 80) + '%'; f.style.left = getRandom(10, 90) + '%';
             });
         }, 2000);
     }
@@ -404,25 +505,26 @@
     function startSparklerTrail() {
         clearInterval(state.trailInterval);
         state.trailInterval = setInterval(() => {
-            document.querySelectorAll('#game-area .firefly:not(.opacity-0)').forEach(f => {
+            document.querySelectorAll('#game-area .firefly:not(.opacity-0), #game-area .toxic-firefly').forEach(f => {
                 let rect = f.getBoundingClientRect(); let parentRect = DOM.gameArea.getBoundingClientRect();
-                let trail = document.createElement('div'); trail.className = 'trail-particle';
+                let isToxic = f.classList.contains('toxic-firefly');
+                let trail = document.createElement('div'); 
+                trail.className = 'trail-particle' + (isToxic ? ' toxic-trail' : '');
                 let size = getRandom(3, 8); trail.style.width = size + 'px'; trail.style.height = size + 'px';
-                trail.style.left = (rect.left - parentRect.left + getRandom(5, 20)) + 'px';
-                trail.style.top = (rect.top - parentRect.top + getRandom(5, 20)) + 'px';
+                trail.style.left = (rect.left - parentRect.left + getRandom(5, 30)) + 'px';
+                trail.style.top = (rect.top - parentRect.top + getRandom(5, 30)) + 'px';
                 DOM.gameArea.appendChild(trail); setTimeout(() => trail.remove(), 600);
             });
         }, 150);
     }
 
-    // L4 按下開始
     function beginL4() {
         DOM.startOverlay.classList.add('hidden');
         DOM.instruction.innerText = "出現時就可以點擊捕捉喔！"; 
         
         DOM.controls.style.display = 'flex'; 
         DOM.recallBtn.classList.remove('hidden');
-        DOM.recallBtn.disabled = true; // 播完前先鎖定呼喚
+        DOM.recallBtn.disabled = true;
         
         state.l4Timeout = setTimeout(() => { playLevel4Sequence(); }, 500);
     }
@@ -435,7 +537,6 @@
         for(let i=0; i<bugs.length; i++) {
             if(mySeq !== state.sequenceId) return; 
             
-            // 出現並永久解鎖點擊
             if(!bugs[i].classList.contains('caught')) {
                 bugs[i].classList.remove('opacity-0');
                 bugs[i].style.pointerEvents = 'auto'; 
@@ -444,7 +545,6 @@
             await new Promise(r => setTimeout(r, 1000));
             
             if(mySeq !== state.sequenceId) return;
-            // 隱形 (但維持 pointerEvents = auto，隨時可盲點)
             if(!bugs[i].classList.contains('caught')) {
                 bugs[i].classList.add('opacity-0'); 
             }
@@ -460,10 +560,8 @@
         }
     }
 
-    // 呼喚螢火蟲 (閃爍期間完全開放捕捉)
     function recallFireflies() {
         if(state.currentLevel !== 4 || DOM.recallBtn.disabled) return;
-        
         DOM.recallBtn.disabled = true; 
         
         const uncaught = Array.from(DOM.gameArea.querySelectorAll('.firefly:not(.caught)'));
@@ -473,7 +571,6 @@
             uncaught.forEach(bug => {
                 if(!bug.classList.contains('caught')) bug.classList.add('opacity-0');
             });
-            
             if(state.caughtCount < state.targetCount) {
                 DOM.recallBtn.disabled = false;
             }
@@ -484,22 +581,45 @@
     function selectNumber(num) { DOM.answerBox.innerText = num; DOM.numpad.style.display = 'none'; }
 
     function checkAnswer() {
+        let ans = DOM.answerBox.innerText;
+        
         if (state.currentLevel === 5) { 
-            showFeedback("哇！你的想法太棒了！", "#70e000", 2500);
-            state.stars[4] = true; setTimeout(() => goHome(), 3000); return; 
+            if(ans === '?') { showFeedback("請先輸入你用了幾隻螢火蟲！", "#FFA500"); return; }
+            let usedCount = document.querySelectorAll('#game-board > .l5-firefly').length;
+            if (parseInt(ans) === usedCount) {
+                showFeedback("數得真準！圖案也很漂亮喔！", "#70e000", 4000);
+                state.stars[4] = true; 
+                state.winTimeout = setTimeout(() => goHome(), 5000); 
+            } else {
+                showFeedback(`你拖出來 ${usedCount} 隻，再數數看！`, "#FF6B6B");
+            }
+            return; 
         }
         
-        let ans = DOM.answerBox.innerText;
         if(ans === '?') { showFeedback("請先收集完並選擇數量喔！", "#FFA500"); return; }
-        if (parseInt(ans) === state.targetCount) { levelPassed(); } 
-        else { showFeedback(`數量不對喔，再算算看！`, "#FF6B6B"); }
+        if (parseInt(ans) === state.targetCount && state.caughtCount === state.targetCount) { 
+            levelPassed(); 
+        } else { 
+            if(state.caughtCount < state.targetCount) showFeedback("畫面裡還有螢火蟲沒抓到喔！", "#FF6B6B");
+            // 修改所有算算看為數數看
+            else showFeedback("數量不對喔，再打開箱子數數看！", "#FF6B6B"); 
+        }
     }
     
     function skipLevel() { goHome(); }
+    
     function levelPassed() {
-        showFeedback("太棒了！完全正確！", "#70e000");
+        showFeedback("太棒了！完全正確！", "#70e000", 4000);
         state.stars[state.currentLevel - 1] = true;
-        setTimeout(() => goHome(), 2000);
+        
+        // 揭示答案：自動開箱
+        if (state.currentLevel !== 5) {
+            DOM.ecoBox.classList.remove('hidden-contents');
+            DOM.toggleBoxBtn.classList.add('hidden');
+        }
+        
+        // 延遲5秒跳轉
+        state.winTimeout = setTimeout(() => goHome(), 5000);
     }
 
     /* === L5 專屬邏輯 === */
@@ -516,9 +636,13 @@
     function toggleL5Mode() {
         state.isDrawingMode = !state.isDrawingMode;
         if(state.isDrawingMode) {
-            DOM.modeToggle.innerText = "目前：銀河畫筆 🖌️"; DOM.canvas.style.pointerEvents = 'auto';
+            DOM.modeToggle.innerText = "目前：銀河畫筆 🖌️"; 
+            document.body.classList.add('drawing-mode');
+            DOM.canvas.style.pointerEvents = 'auto';
         } else {
-            DOM.modeToggle.innerText = "目前：拖曳模式 ✋"; DOM.canvas.style.pointerEvents = 'none';
+            DOM.modeToggle.innerText = "目前：拖曳模式 ✋"; 
+            document.body.classList.remove('drawing-mode');
+            DOM.canvas.style.pointerEvents = 'none';
         }
     }
 
@@ -526,8 +650,9 @@
         if(state.isDrawingMode) return;
         state.draggedObj = el;
         if(el.parentElement === DOM.ecoBox) {
-            let rect = el.getBoundingClientRect(); let boardRect = DOM.gameArea.getBoundingClientRect();
-            DOM.gameArea.appendChild(el);
+            let rect = el.getBoundingClientRect(); 
+            let boardRect = DOM.gameBoard.getBoundingClientRect();
+            DOM.gameBoard.appendChild(el); 
             el.classList.remove('caught'); el.classList.add('l5-firefly');
             el.style.left = (rect.left - boardRect.left + rect.width/2) + 'px';
             el.style.top = (rect.top - boardRect.top + rect.height/2) + 'px';
@@ -536,18 +661,35 @@
 
     function handleMove(clientX, clientY) {
         if(!state.draggedObj || state.isDrawingMode) return;
-        let boardRect = DOM.gameArea.getBoundingClientRect();
+        let boardRect = DOM.gameBoard.getBoundingClientRect();
         state.draggedObj.style.left = (clientX - boardRect.left) + 'px';
         state.draggedObj.style.top = (clientY - boardRect.top) + 'px';
     }
 
     document.addEventListener('mousemove', (e) => handleMove(e.clientX, e.clientY));
-    document.addEventListener('mouseup', () => { state.draggedObj = null; });
     document.addEventListener('touchmove', (e) => {
         if(state.draggedObj && !state.isDrawingMode) e.preventDefault();
         if(e.touches.length > 0) handleMove(e.touches[0].clientX, e.touches[0].clientY);
     }, {passive:false});
-    document.addEventListener('touchend', () => { state.draggedObj = null; });
+
+    function handleDragEnd() {
+        if(state.draggedObj && state.currentLevel === 5 && !state.isDrawingMode) {
+            let el = state.draggedObj;
+            let boxRect = DOM.ecoBoxContainer.getBoundingClientRect();
+            let elRect = el.getBoundingClientRect();
+            let centerY = elRect.top + elRect.height / 2;
+            
+            if(centerY > boxRect.top) {
+                DOM.ecoBox.appendChild(el);
+                el.classList.remove('l5-firefly');
+                el.classList.add('caught');
+                el.style.left = ''; el.style.top = '';
+            }
+        }
+        state.draggedObj = null;
+    }
+    document.addEventListener('mouseup', handleDragEnd);
+    document.addEventListener('touchend', handleDragEnd);
 
     function initDrawing() {
         let isDrawing = false;
