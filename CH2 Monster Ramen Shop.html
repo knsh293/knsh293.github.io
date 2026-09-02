@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>怪獸拉麵店 - V3.2 (視覺與排版優化)</title>
+    <style>
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; touch-action: none; }
+        body { margin: 0; padding: 0; width: 100vw; height: 100vh; background-color: #2c3e50; display: flex; justify-content: center; align-items: center; font-family: "Microsoft JhengHei", sans-serif; overflow: hidden; }
+        #game-board { width: 100%; height: 100%; max-width: calc(100vh * 16 / 9); max-height: calc(100vw * 9 / 16); background: linear-gradient(to bottom, #fdf6e3, #e9dac1); position: relative; overflow: hidden; box-shadow: 0 0 20px rgba(0,0,0,0.9); border-radius: 8px; }
+
+        /* UI 共用 */
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; z-index: 200; pointer-events: none; }
+        .stars { display: flex; gap: 10px; }
+        .star { font-size: 3vh; color: #ccc; text-shadow: 0 0 5px rgba(0,0,0,0.2); transition: 0.3s; }
+        .star.active { color: #FFD700; text-shadow: 0 0 15px #FFD700, 0 0 5px #ff8c00; }
+        .home-btn { background: rgba(0,0,0,0.5); color: white; border: none; padding: 8px 15px; border-radius: 20px; cursor: pointer; pointer-events: auto; font-size: 2vh; }
+        #instruction { position: absolute; top: 5%; left: 0; width: 100%; text-align: center; color: #333; font-size: 3.5vh; font-weight: bold; pointer-events: none; z-index: 150; text-shadow: 2px 2px 0px #fff, -2px -2px 0px #fff, 2px -2px 0px #fff, -2px 2px 0px #fff; }
+
+        /* 大廳 */
+        #home-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #f5b041; z-index: 300; }
+        #home-screen h1 { color: #fff; font-size: 7vh; margin-bottom: 30px; text-shadow: 3px 3px 0 #d35400; letter-spacing: 2px; }
+        .level-grid { display: flex; gap: 20px; }
+        .level-btn { width: 15vh; height: 15vh; border-radius: 15px; border: 4px solid #fff; background: #3498db; color: #fff; font-size: 3.5vh; font-weight: bold; cursor: pointer; display: flex; flex-direction: column; justify-content: center; align-items: center; box-shadow: 0 5px 0 #2980b9; transition: 0.1s; }
+        .level-btn:active { transform: translateY(5px); box-shadow: 0 0 0 #2980b9; }
+        .level-title { font-size: 1.8vh; margin-top: 5px; }
+        .home-star { font-size: 3.5vh; color: #fff; margin-bottom: 5px; opacity: 0.4; }
+        .home-star.active { color: #FFD700; opacity: 1; text-shadow: 0 0 10px #FFD700, 0 0 5px #000; }
+
+        /* 怪獸與對話框 */
+        .monster-container { position: absolute; width: 20vh; height: 25vh; z-index: 20; }
+        .monster-container img { width: 100%; height: 100%; object-fit: contain; }
+        .emoji-fallback { width: 100%; height: 100%; display: none; justify-content: center; align-items: center; font-size: 12vh; background: #8e44ad; border-radius: 20px; border: 4px solid #333; box-shadow: inset -5px -5px 10px rgba(0,0,0,0.3); }
+        .speech-bubble { position: absolute; width: 28vh; background: #fff; border-radius: 15px; border: 3px solid #333; padding: 10px; font-size: 2.2vh; font-weight: bold; color: #333; box-shadow: 3px 3px 0 rgba(0,0,0,0.1); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; z-index: 100;}
+        
+        /* 對話框方向 */
+        .bubble-right { top: -5vh; left: 100%; }
+        .bubble-right::after { content: ''; position: absolute; bottom: 20%; left: -1.5vh; border-width: 1vh 1.5vh 1vh 0; border-style: solid; border-color: transparent #fff transparent transparent; }
+        .bubble-right::before { content: ''; position: absolute; bottom: calc(20% - 0.4vh); left: -2vh; border-width: 1.4vh 2vh 1.4vh 0; border-style: solid; border-color: transparent #333 transparent transparent; z-index: -1; }
+        .bubble-left { top: -5vh; right: 100%; }
+        .bubble-left::after { content: ''; position: absolute; bottom: 20%; right: -1.5vh; border-width: 1vh 0 1vh 1.5vh; border-style: solid; border-color: transparent transparent transparent #fff; }
+        .bubble-left::before { content: ''; position: absolute; bottom: calc(20% - 0.4vh); right: -2vh; border-width: 1.4vh 0 1.4vh 2vh; border-style: solid; border-color: transparent transparent transparent #333; z-index: -1; }
+        .bubble-top { bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 2vh; }
+        .bubble-top::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border-width: 1.5vh 1vh 0 1vh; border-style: solid; border-color: #fff transparent transparent transparent; }
+        .bubble-top::before { content: ''; position: absolute; top: calc(100% - 0.2vh); left: 50%; transform: translateX(-50%); border-width: 1.8vh 1.3vh 0 1.3vh; border-style: solid; border-color: #333 transparent transparent transparent; z-index: -1; }
+
+        /* 共用桌子與回饋 */
+        .table-bg { position: absolute; bottom: 0; left: 0; width: 100%; height: 15%; background: #8d6e63; border-top: 5px solid #5d4037; z-index: 5; }
+        #feedback-msg { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 6vh; font-weight: bold; color: #fff; z-index: 500; text-align: center; white-space: nowrap; text-shadow: 0 0 20px rgba(0,0,0,0.8), 0 0 10px #e67e22; opacity: 0; transition: 0.3s; pointer-events: none; }
+        .finish-btn { position: absolute; top: 15%; right: 5%; background: #2ecc71; color: white; border: 4px solid #27ae60; padding: 10px 20px; font-size: 3vh; font-weight: bold; border-radius: 15px; cursor: pointer; box-shadow: 0 5px 0 #27ae60; z-index: 100; }
+        .finish-btn:active { transform: translateY(5px); box-shadow: 0 0 0 #27ae60; }
+        .level-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; }
+        .level-container.active { display: block; }
+        .hidden { display: none !important; opacity: 0 !important; pointer-events: none !important; }
+        .guide-btn { position: absolute; top: 15%; right: 5%; background: #9b59b6; color: white; border: 3px solid #8e44ad; padding: 8px 15px; font-weight: bold; border-radius: 10px; cursor: pointer; z-index:100; }
+
+        /* L1 專屬 */
+        #l1-machine { position: absolute; top: 15vh; left: 50%; transform: translateX(-50%); width: 15vh; height: 12vh; background: #7f8c8d; border-radius: 10px; border: 4px solid #2c3e50; border-bottom-left-radius: 30px; border-bottom-right-radius: 30px; display: flex; justify-content: center; align-items: flex-start; padding-top: 1vh; z-index: 20; }
+        #l1-machine-btn { background: #e67e22; color: white; border: 3px solid #d35400; border-radius: 10px; padding: 5px 15px; font-weight: bold; font-size: 2vh; cursor: pointer; }
+        #l1-hotdog { position: absolute; top: 27vh; left: 35%; width: 3vh; height: 25vh; background: #e74c3c; border-radius: 20px; border: 3px solid #c0392b; }
+        #l1-noodle-container { position: absolute; top: 27vh; left: 50%; transform: translateX(-50%); width: 4vh; height: 45vh; display: flex; justify-content: center; }
+        #l1-noodle { width: 2.5vh; height: 0vh; background: #f1c40f; border-radius: 20px; border: 2px solid #f39c12; }
+        #l1-target-line { position: absolute; top: 52vh; left: 30%; width: 40%; height: 0; border-bottom: 4px dashed #e74c3c; z-index: 10; transition: 0.3s; }
+        #l1-line-text { position: absolute; top: 52vh; left: 71%; color: #e74c3c; font-weight: bold; font-size: 2.5vh; transform: translateY(-50%); transition: 0.3s; }
+
+        /* L2 專屬 */
+        #l2-tofu { position: absolute; bottom: 15%; left: 20%; width: 12vh; height: 7.5vh; background: #8d5524; border: 3px solid #603813; border-radius: 5px; z-index: 10; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 2vh; color: #fff; }
+        #l2-meat-container { position: absolute; bottom: 15%; left: 50%; transform: translateX(-50%); width: 15vh; height: 20vh; cursor: url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2232%22%20height%3D%2232%22%3E%3Ctext%20x%3D%220%22%20y%3D%2224%22%20font-size%3D%2224%22%3E%F0%9F%94%AA%3C%2Ftext%3E%3C%2Fsvg%3E') 0 24, crosshair; z-index: 20; }
+        .l2-meat-base { position: absolute; bottom: 0; width: 100%; height: 100%; background: #c0392b; border: 3px solid #922b21; border-radius: 10px; transition: height 0.3s; }
+        .l2-meat-slice { position: absolute; width: 100%; background: #e74c3c; border: 3px solid #c0392b; border-radius: 10px; transition: 0.5s; opacity: 0; }
+        #l2-cut-line { position: absolute; left: 0; width: 100%; height: 4px; background: rgba(255,255,255,0.8); box-shadow: 0 0 10px #fff; display: none; pointer-events: none; z-index: 25; }
+        #l2-target-line { position: absolute; bottom: calc(15% + 7.5vh); left: 18%; width: 50%; height: 0; border-bottom: 4px dashed #e74c3c; z-index: 10; transition: 0.3s; }
+        #l2-line-text { position: absolute; bottom: calc(15% + 7.5vh); left: 70%; color: #e74c3c; font-weight: bold; font-size: 2.5vh; transform: translateY(50%); transition: 0.3s; }
+
+        /* L3 專屬 */
+        .l3-noodle-wrap { position: absolute; transform-origin: bottom center; z-index: 20; }
+        .l3-noodle-body { width: 100%; height: 100%; background: #f1c40f; border: 2px solid #f39c12; border-radius: 15px; cursor: grab; }
+        .l3-rot-handle { position: absolute; top: -5vh; left: 50%; transform: translateX(-50%); width: 6vh; height: 6vh; background: #fff; border: 3px solid #3498db; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: #3498db; font-size: 3.5vh; cursor: grab; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+
+        /* L4 專屬 (全面改版 SVG) */
+        #l4-check-btn { position: absolute; bottom: 5%; right: 5%; background: #3498db; color: white; border: 4px solid #2980b9; padding: 10px 20px; font-size: 3vh; font-weight: bold; border-radius: 15px; cursor: pointer; box-shadow: 0 5px 0 #2980b9; z-index: 100; }
+        #l4-check-btn:active { transform: translateY(5px); box-shadow: 0 0 0 #2980b9; }
+        .l4-item-wrap { position: absolute; width: 6vh; height: 16vh; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 10; }
+        .l4-noodle-svg { width: 100%; height: 100%; pointer-events: none; }
+        .l4-circle { position: absolute; width: 14vh; height: 14vh; border: 6px solid #e74c3c; border-radius: 50%; opacity: 0; transform: scale(1.2); transition: 0.2s; box-shadow: 0 0 10px rgba(231,76,60,0.5); pointer-events: none; }
+
+        /* L5 專屬 */
+        #l5-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
+        .noodle-path { fill: none; stroke: #f1c40f; stroke-width: 2.5vh; stroke-linecap: round; stroke-linejoin: round; }
+        .noodle-outline { fill: none; stroke: #d35400; stroke-width: 3vh; stroke-linecap: round; stroke-linejoin: round; }
+        #l5-handle { position: absolute; width: 6vh; height: 6vh; background: #fff; border: 4px solid #3498db; border-radius: 50%; cursor: grab; display: none; z-index: 50; box-shadow: 0 0 15px rgba(52, 152, 219, 0.8); }
+        #l5-handle::after { content: '↔'; font-size: 3vh; color: #3498db; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        #l5-hint-bubble { position: absolute; background: #fff; border: 3px solid #333; border-radius: 10px; padding: 8px; font-weight: bold; font-size: 2vh; pointer-events: none; display: none; z-index: 60; box-shadow: 2px 2px 0 rgba(0,0,0,0.2); width: max-content; transform: translate(-50%, -100%); margin-top: -1vh; }
+        #l5-hint-bubble::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border-width: 1vh 1vh 0; border-style: solid; border-color: #333 transparent transparent transparent; }
+        #l5-quiz { position: absolute; bottom: 5%; left: 50%; transform: translateX(-50%); display: none; gap: 20px; z-index: 100; }
+        .quiz-btn { background: #fff; border: 4px solid #2c3e50; border-radius: 15px; padding: 10px 30px; font-size: 3vh; font-weight: bold; cursor: pointer; box-shadow: 0 5px 0 #2c3e50; }
+    </style>
+</head>
+<body>
+<div id="game-board">
+    <!-- 首頁大廳 -->
+    <div id="home-screen">
+        <h1>怪獸拉麵店 🍜</h1>
+        <div class="level-grid">
+            <button class="level-btn" onclick="startLevel(1)"><div class="home-star" id="home-star-1">☆</div>1<div class="level-title">貪吃怪比長短</div></button>
+            <button class="level-btn" onclick="startLevel(2)"><div class="home-star" id="home-star-2">☆</div>2<div class="level-title">挑剔怪切叉燒</div></button>
+            <button class="level-btn" onclick="startLevel(3)"><div class="home-star" id="home-star-3">☆</div>3<div class="level-title">糊塗怪對齊線</div></button>
+            <button class="level-btn" onclick="startLevel(4)"><div class="home-star" id="home-star-4">☆</div>4<div class="level-title">麵條篩選師</div></button>
+            <button class="level-btn" onclick="startLevel(5)"><div class="home-star" id="home-star-5">☆</div>5<div class="level-title">雙胞胎直捲麵</div></button>
+        </div>
+    </div>
+
+    <!-- UI -->
+    <div id="ui-layer">
+        <button class="home-btn" onclick="goHome()">🏠 回大廳</button>
+        <div class="stars">
+            <div class="star" id="star-1">★</div><div class="star" id="star-2">★</div><div class="star" id="star-3">★</div><div class="star" id="star-4">★</div><div class="star" id="star-5">★</div>
+        </div>
+    </div>
+    <div id="instruction"></div>
+    <div id="feedback-msg"></div>
+
+    <!-- === L1 === -->
+    <div id="level-1" class="level-container">
+        <div class="table-bg"></div>
+        <button id="l1-guide-btn" class="guide-btn" onclick="toggleL1Guide()">顯示輔助線</button>
+        <div id="l1-hotdog"></div><div id="l1-target-line" class="hidden"></div><div id="l1-line-text" class="hidden">要超過虛線呵！</div>
+        <button id="l1-finish-btn" class="finish-btn hidden" onclick="goHome()">⭐ 過關！回大廳</button>
+        <div class="monster-container" style="bottom:10%; left:5%;">
+            <img src="monster1.png" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+            <div class="emoji-fallback">🦖</div>
+            <div class="speech-bubble bubble-right" id="l1-bubble">我的麵條要比<br>熱狗還要長！</div>
+        </div>
+        <div id="l1-machine"><button id="l1-machine-btn">按住擠麵</button></div>
+        <div id="l1-noodle-container"><div id="l1-noodle"></div></div>
+    </div>
+
+    <!-- === L2 === -->
+    <div id="level-2" class="level-container">
+        <div class="table-bg"></div>
+        <button id="l2-guide-btn" class="guide-btn" onclick="toggleL2Guide()">顯示輔助線</button>
+        <div id="l2-target-line" class="hidden"></div><div id="l2-line-text" class="hidden">要比虛線薄呵！</div>
+        <div id="l2-tofu">豆干</div>
+        <button id="l2-finish-btn" class="finish-btn hidden" onclick="goHome()">⭐ 過關！回大廳</button>
+        <div class="monster-container" style="bottom:10%; right:10%;">
+            <img src="monster2.png" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+            <div class="emoji-fallback" style="background:#e74c3c;">👹</div>
+            <div class="speech-bubble bubble-left" id="l2-bubble">我要吃比豆干<br>更薄的叉燒肉！<br><span style="font-size:1.5vh">(把不要的部分從上方切掉)</span></div>
+        </div>
+        <div id="l2-meat-container">
+            <div class="l2-meat-base" id="l2-meat-base"></div>
+            <div class="l2-meat-slice" id="l2-meat-slice"></div>
+            <div id="l2-cut-line"></div>
+        </div>
+    </div>
+
+    <!-- === L3 (糊塗怪對齊) === -->
+    <div id="level-3" class="level-container">
+        <div class="table-bg"></div>
+        <button id="l3-finish-btn" class="finish-btn hidden" onclick="goHome()">⭐ 過關！回大廳</button>
+        <div class="monster-container" style="bottom:10%; right:10%;">
+            <img src="monster4.png" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+            <div class="emoji-fallback" style="background:#f1c40f;">🤪</div>
+            <div class="speech-bubble bubble-left" id="l3-bubble">把麵條拉到桌面上吸附，<br>再把它們轉直！</div>
+        </div>
+        <div id="l3-noodles-area"></div>
+    </div>
+
+    <!-- === L4 (麵條篩選師) === -->
+    <div id="level-4" class="level-container">
+        <div class="table-bg"></div>
+        <button id="l4-finish-btn" class="finish-btn hidden" onclick="goHome()">⭐ 過關！回大廳</button>
+        <button id="l4-check-btn" onclick="checkL4Answer()">✔️ 檢核答案</button>
+        <div class="monster-container" style="bottom:10%; right:10%;">
+            <img src="monster_new.png" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+            <div class="emoji-fallback" style="background:#9b59b6;">🧐</div>
+            <div class="speech-bubble bubble-top" id="l4-bubble">直直的麵條才是<br>最好吃的，<br>把它們都找出來。</div>
+        </div>
+        <div id="l4-noodles-area"></div>
+    </div>
+
+    <!-- === L5 (雙胞胎拉直) === -->
+    <div id="level-5" class="level-container">
+        <div class="monster-container" style="bottom:50%; left:5%; width:15vh; height:18vh;">
+            <img src="monster3_1.png" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+            <div class="emoji-fallback" style="background:#2ecc71;">👾</div>
+        </div>
+        <div class="monster-container" style="bottom:15%; left:5%; width:15vh; height:18vh;">
+            <img src="monster3_2.png" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+            <div class="emoji-fallback" style="background:#e67e22;">🤖</div>
+        </div>
+        <svg id="l5-svg">
+            <path class="noodle-outline" id="l5-straight-outline" d="" /><path class="noodle-path" id="l5-straight-path" d="" />
+            <path class="noodle-outline" id="l5-wavy-outline" d="" /><path class="noodle-path" id="l5-wavy-path" d="" />
+        </svg>
+        <div id="l5-handle"></div>
+        <div id="l5-hint-bubble">波浪麵條好像可以拉拉看呵！</div>
+        <div id="l5-quiz">
+            <button class="quiz-btn" onclick="l5Answer(false)">選直線 ➖</button>
+            <button class="quiz-btn" onclick="l5Answer(true)">選波浪 〰️</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const state = { stars: [false, false, false, false, false], currentLevel: 0 };
+    const DOM = { home: document.getElementById('home-screen'), instruction: document.getElementById('instruction'), feedback: document.getElementById('feedback-msg'), levels: document.querySelectorAll('.level-container') };
+
+    function showFeedback(text, color, top='40%', left='50%') { 
+        DOM.feedback.innerHTML = text; 
+        DOM.feedback.style.color = color; 
+        DOM.feedback.style.top = top;
+        DOM.feedback.style.left = left;
+        DOM.feedback.style.opacity = 1; 
+        setTimeout(() => DOM.feedback.style.opacity = 0, 2500); 
+    }
+
+    function goHome() {
+        DOM.home.classList.remove('hidden'); DOM.levels.forEach(l => l.classList.remove('active')); DOM.instruction.innerHTML = '';
+        for(let i=1; i<=5; i++) {
+            document.getElementById(`star-${i}`).classList.toggle('active', state.stars[i-1]);
+            let hs = document.getElementById(`home-star-${i}`);
+            if(state.stars[i-1]) { hs.innerText = '★'; hs.classList.add('active'); } else { hs.innerText = '☆'; hs.classList.remove('active'); }
+        }
+        clearInterval(l1.interval); clearTimeout(l5.animTimeout);
+    }
+
+    function startLevel(level) {
+        state.currentLevel = level; DOM.home.classList.add('hidden'); DOM.levels.forEach(l => l.classList.remove('active'));
+        document.getElementById(`level-${level}`).classList.add('active');
+        if(level===1) initL1(); else if(level===2) initL2(); else if(level===3) initL3(); else if(level===4) initL4(); else if(level===5) initL5();
+    }
+
+    /* === L1 === */
+    const l1 = { btn: document.getElementById('l1-machine-btn'), noodleEl: document.getElementById('l1-noodle'), line: document.getElementById('l1-target-line'), text: document.getElementById('l1-line-text'), guideBtn: document.getElementById('l1-guide-btn'), bubble: document.getElementById('l1-bubble'), finish: document.getElementById('l1-finish-btn'), isPressing: false, interval: null, height: 0, target: 0, passed: false };
+    function initL1() {
+        DOM.instruction.innerHTML = "按住製麵機，擠出比熱狗更長的麵條！"; l1.height = 0; l1.noodleEl.style.height = '0px'; l1.passed = false; l1.finish.classList.add('hidden'); l1.bubble.innerHTML = '我的麵條要比<br>熱狗還要長！';
+        l1.line.classList.add('hidden'); l1.text.classList.add('hidden'); l1.guideBtn.innerText = "顯示輔助線";
+        setTimeout(() => { l1.target = document.getElementById('game-board').clientHeight * 0.25; }, 100);
+    }
+    function toggleL1Guide() {
+        if(l1.line.classList.contains('hidden')) { l1.line.classList.remove('hidden'); l1.text.classList.remove('hidden'); l1.guideBtn.innerText = "隱藏輔助線"; }
+        else { l1.line.classList.add('hidden'); l1.text.classList.add('hidden'); l1.guideBtn.innerText = "顯示輔助線"; }
+    }
+    function squeezeNoodle() {
+        if(!l1.isPressing) return;
+        l1.height += 2; l1.noodleEl.style.height = l1.height + 'px';
+        if(l1.noodleEl.getBoundingClientRect().bottom >= document.querySelector('#level-1 .table-bg').getBoundingClientRect().top) { l1.isPressing = false; clearInterval(l1.interval); checkL1(); }
+    }
+    function checkL1() {
+        if(l1.height===0 || l1.passed) return;
+        if(l1.height > l1.target) { l1.passed = true; showFeedback("太棒了！夠長了！", "#2ecc71", "75%", "50%"); l1.bubble.innerHTML = '太好吃啦！<br>🍜😋'; state.stars[0] = true; setTimeout(() => l1.finish.classList.remove('hidden'), 1500); }
+        else showFeedback("還不夠長喔！再擠一點", "#e74c3c", "75%", "50%");
+    }
+    l1.btn.onmousedown = () => { l1.isPressing = true; l1.interval = setInterval(squeezeNoodle, 20); }; l1.btn.onmouseup = () => { l1.isPressing = false; clearInterval(l1.interval); checkL1(); }; l1.btn.onmouseleave = () => { if(l1.isPressing){ l1.isPressing = false; clearInterval(l1.interval); checkL1(); } }; l1.btn.ontouchstart = (e) => { e.preventDefault(); l1.isPressing = true; l1.interval = setInterval(squeezeNoodle, 20); }; l1.btn.ontouchend = () => { l1.isPressing = false; clearInterval(l1.interval); checkL1(); };
+
+    /* === L2 === */
+    const l2 = { container: document.getElementById('l2-meat-container'), base: document.getElementById('l2-meat-base'), slice: document.getElementById('l2-meat-slice'), line: document.getElementById('l2-cut-line'), tofu: document.getElementById('l2-tofu'), bubble: document.getElementById('l2-bubble'), finish: document.getElementById('l2-finish-btn'), guideBtn: document.getElementById('l2-guide-btn'), lineGuide: document.getElementById('l2-target-line'), textGuide: document.getElementById('l2-line-text'), isDragging: false, startY: 0, passed: false };
+    function initL2() {
+        DOM.instruction.innerHTML = "從叉燒肉上方往下切，切出一片薄肉！"; l2.passed = false; l2.finish.classList.add('hidden'); l2.bubble.innerHTML = '我要吃比豆干<br>更薄的叉燒肉！<br><span style="font-size:1.5vh">(把不要的部分從上方切掉)</span>';
+        l2.base.style.height = '100%'; l2.slice.style.opacity = '0'; l2.slice.style.top = '0'; l2.slice.style.left = '0'; l2.slice.style.transform = 'none'; l2.line.style.display = 'none';
+        l2.lineGuide.classList.add('hidden'); l2.textGuide.classList.add('hidden'); l2.guideBtn.innerText = "顯示輔助線";
+    }
+    function toggleL2Guide() {
+        if(l2.lineGuide.classList.contains('hidden')) { l2.lineGuide.classList.remove('hidden'); l2.textGuide.classList.remove('hidden'); l2.guideBtn.innerText = "隱藏輔助線"; }
+        else { l2.lineGuide.classList.add('hidden'); l2.textGuide.classList.add('hidden'); l2.guideBtn.innerText = "顯示輔助線"; }
+    }
+    function startCut(clientY) {
+        if(l2.passed) return;
+        let rect = l2.container.getBoundingClientRect(); l2.startY = clientY - rect.top;
+        if(l2.startY > 0 && l2.startY < rect.height) { l2.isDragging = true; l2.line.style.display = 'block'; l2.line.style.top = l2.startY + 'px'; }
+    }
+    function endCut() {
+        if(!l2.isDragging) return;
+        l2.isDragging = false; l2.line.style.display = 'none';
+        let containerH = l2.container.getBoundingClientRect().height; let tofuH = document.getElementById('game-board').clientHeight * 0.075; let cutThickness = l2.startY;
+        let remainingHeight = containerH - cutThickness;
+        l2.slice.style.height = cutThickness + 'px'; l2.slice.style.opacity = '1'; l2.base.style.height = remainingHeight + 'px';
+        setTimeout(() => { l2.slice.style.transform = 'translate(-15vh, -10vh) rotate(-15deg)'; l2.slice.style.opacity = '0'; }, 100);
+        setTimeout(() => {
+            if(remainingHeight < tofuH) { l2.passed = true; showFeedback("切得真薄！完美！", "#2ecc71", "40%", "50%"); l2.bubble.innerHTML = '薄薄的最好吃！<br>😋'; state.stars[1] = true; setTimeout(() => l2.finish.classList.remove('hidden'), 1500); }
+            else { showFeedback("哎呀，下面留得太厚了！重切一次", "#e74c3c", "40%", "50%"); setTimeout(initL2, 1500); }
+        }, 600);
+    }
+    l2.container.onmousedown = (e) => startCut(e.clientY); document.addEventListener('mousemove', (e) => { if(l2.isDragging) l2.line.style.top = (e.clientY - l2.container.getBoundingClientRect().top) + 'px'; }); document.addEventListener('mouseup', endCut); l2.container.ontouchstart = (e) => startCut(e.touches[0].clientY); document.addEventListener('touchmove', (e) => { if(l2.isDragging) l2.line.style.top = (e.touches[0].clientY - l2.container.getBoundingClientRect().top) + 'px'; }); document.addEventListener('touchend', endCut);
+
+    /* === L3 (糊塗怪對齊) === */
+    const l3 = { area: document.getElementById('l3-noodles-area'), bubble: document.getElementById('l3-bubble'), finish: document.getElementById('l3-finish-btn'), dragged: null, rotated: null, straightCount: 0 };
+    function initL3() {
+        DOM.instruction.innerHTML = "哪根麵條最長？立在桌上才看得出來！"; l3.area.innerHTML = ''; l3.straightCount = 0; l3.finish.classList.add('hidden'); l3.bubble.innerHTML = '把麵條拉到桌面上吸附，<br>再把它們轉直！';
+        const lengths = [25, 35, 18]; let boardW = document.getElementById('game-board').clientWidth; let boardH = document.getElementById('game-board').clientHeight;
+        lengths.forEach((len, i) => {
+            let n = document.createElement('div'); n.className = 'l3-noodle-wrap';
+            n.style.height = (len * boardH / 100) + 'px'; n.style.width = '3vh';
+            n.style.left = (boardW * (0.2 + i*0.25)) + 'px'; n.style.top = (boardH * (0.1 + Math.random()*0.1)) + 'px';
+            let initAngle = (Math.random() > 0.5 ? 1 : -1) * (30 + Math.random() * 45);
+            n.dataset.angle = initAngle; n.style.transform = `rotate(${initAngle}deg)`; n.dataset.len = len; n.dataset.state = 'free';
+            n.innerHTML = `<div class="l3-noodle-body"></div><div class="l3-rot-handle hidden">↻</div>`;
+            let body = n.querySelector('.l3-noodle-body'); let handle = n.querySelector('.l3-rot-handle');
+            body.onmousedown = (e) => { if(n.dataset.state === 'free') l3.dragged = n; };
+            body.ontouchstart = (e) => { e.preventDefault(); if(n.dataset.state === 'free') l3.dragged = n; };
+            body.onclick = () => { if(l3.straightCount === 3) checkL3(n); };
+            handle.onmousedown = (e) => { e.stopPropagation(); l3.rotated = n; };
+            handle.ontouchstart = (e) => { e.preventDefault(); e.stopPropagation(); l3.rotated = n; };
+            l3.area.appendChild(n);
+        });
+    }
+    function doDragL3(clientX, clientY) {
+        let rect = document.getElementById('game-board').getBoundingClientRect();
+        if(l3.dragged) { l3.dragged.style.left = (clientX - rect.left - l3.dragged.offsetWidth/2) + 'px'; l3.dragged.style.top = (clientY - rect.top - l3.dragged.offsetHeight/2) + 'px'; }
+        if(l3.rotated) {
+            let mouseX = clientX - rect.left; let mouseY = clientY - rect.top;
+            let pivotX = parseFloat(l3.rotated.style.left) + l3.rotated.offsetWidth / 2;
+            let pivotY = parseFloat(l3.rotated.style.top) + l3.rotated.offsetHeight;
+            let angle = Math.atan2(mouseX - pivotX, pivotY - mouseY) * 180 / Math.PI;
+            l3.rotated.style.transform = `rotate(${angle}deg)`; l3.rotated.dataset.angle = angle;
+        }
+    }
+    function endDragL3() {
+        if(l3.dragged) {
+            let tableTop = document.getElementById('game-board').clientHeight * 0.85;
+            let nBottom = parseFloat(l3.dragged.style.top) + l3.dragged.offsetHeight;
+            if(Math.abs(nBottom - tableTop) < 80) {
+                l3.dragged.style.top = (tableTop - l3.dragged.offsetHeight) + 'px';
+                l3.dragged.dataset.state = 'snapped'; l3.dragged.querySelector('.l3-rot-handle').classList.remove('hidden');
+            }
+            l3.dragged = null;
+        }
+        if(l3.rotated) {
+            let angle = parseFloat(l3.rotated.dataset.angle);
+            if(Math.abs(angle) < 15) {
+                l3.rotated.style.transform = `rotate(0deg)`; l3.rotated.dataset.state = 'straight';
+                l3.rotated.querySelector('.l3-rot-handle').classList.add('hidden'); l3.straightCount++;
+                if(l3.straightCount === 3) { l3.bubble.innerHTML = '全部立正站好了！<br>現在點選最長的一根！'; showFeedback("對齊完成！請點選最長的麵條", "#3498db", "40%", "50%"); }
+            }
+            l3.rotated = null;
+        }
+    }
+    function checkL3(n) {
+        if(n.dataset.len == '35') { showFeedback("完全正確！對齊一端再比很重要！", "#2ecc71", "40%", "50%"); l3.bubble.innerHTML = '原來是這根最長！'; state.stars[2] = true; setTimeout(() => l3.finish.classList.remove('hidden'), 1500); }
+        else showFeedback("不對喔，再比對一下頂端！", "#e74c3c", "40%", "50%");
+    }
+    document.addEventListener('mousemove', (e) => doDragL3(e.clientX, e.clientY)); document.addEventListener('touchmove', (e) => { if(l3.dragged || l3.rotated) doDragL3(e.touches[0].clientX, e.touches[0].clientY); }, {passive:false}); document.addEventListener('mouseup', endDragL3); document.addEventListener('touchend', endDragL3);
+
+    /* === L4 (麵條篩選師) === */
+    const l4 = { area: document.getElementById('l4-noodles-area'), bubble: document.getElementById('l4-bubble'), finish: document.getElementById('l4-finish-btn'), passed: false, noodles: [] };
+    function initL4() {
+        DOM.instruction.innerHTML = "點擊圈選出所有直直的麵條，再按檢核答案！"; l4.area.innerHTML = ''; l4.passed = false; l4.finish.classList.add('hidden');
+        l4.bubble.innerHTML = '直直的麵條才是<br>最好吃的，<br>把它們都找出來。'; l4.noodles = [];
+        
+        // 修改為 4 根直線, 6 根曲線
+        const types = ['straight','straight','straight','straight', 'wavy','wavy','wavy','wavy','wavy','wavy'].sort(() => Math.random() - 0.5);
+        
+        const svgBase = (d) => `<svg width="100%" height="100%" viewBox="-20 0 60 120" style="overflow:visible;"><path d="${d}" fill="none" stroke="#f39c12" stroke-width="14" stroke-linecap="round"/><path d="${d}" fill="none" stroke="#f1c40f" stroke-width="8" stroke-linecap="round"/></svg>`;
+        const straightPath = "M 10 10 L 10 110";
+        const wavyPaths = [
+            "M 10 10 Q 35 25 10 40 Q -15 55 10 70 Q 35 85 10 100 Q -15 115 10 110",
+            "M 10 10 A 30 50 0 0 1 10 110",
+            "M 10 10 C 60 10, 60 110, 10 110",
+            "M 10 10 Q 40 35 10 60 Q -20 85 10 110",
+            "M 10 10 Q 50 60 10 110"
+        ];
+
+        for(let i=0; i<10; i++) {
+            let row = Math.floor(i/5); let col = i%5;
+            let wrap = document.createElement('div'); wrap.className = 'l4-item-wrap';
+            let baseX = 10 + col * 15; let baseY = 25 + row * 30; 
+            wrap.style.left = (baseX + (Math.random()*4 - 2)) + '%'; wrap.style.top = (baseY + (Math.random()*4 - 2)) + '%';
+            wrap.style.transform = `rotate(${Math.random()*360}deg)`; wrap.dataset.type = types[i]; wrap.dataset.selected = "false";
+            
+            let noodle = document.createElement('div');
+            noodle.className = 'l4-noodle-svg';
+            if(types[i] === 'straight') { 
+                noodle.innerHTML = svgBase(straightPath);
+            } else {
+                let randWavy = wavyPaths[Math.floor(Math.random() * wavyPaths.length)];
+                noodle.innerHTML = svgBase(randWavy);
+            }
+            wrap.appendChild(noodle);
+            let circle = document.createElement('div'); circle.className = 'l4-circle'; wrap.appendChild(circle);
+            
+            wrap.onclick = () => {
+                if(l4.passed) return;
+                wrap.dataset.selected = wrap.dataset.selected === "true" ? "false" : "true";
+                if(wrap.dataset.selected === "true") { circle.style.opacity = '1'; circle.style.transform = 'scale(1)'; } 
+                else { circle.style.opacity = '0'; circle.style.transform = 'scale(1.2)'; }
+            };
+            l4.area.appendChild(wrap); l4.noodles.push(wrap);
+        }
+    }
+    function checkL4Answer() {
+        if(l4.passed) return;
+        let correct = true; let selectedCount = 0;
+        l4.noodles.forEach(n => {
+            let isS = n.dataset.type === 'straight'; let isSel = n.dataset.selected === 'true';
+            if(isSel) selectedCount++;
+            if((isS && !isSel) || (!isS && isSel)) correct = false;
+        });
+        if(selectedCount === 0) { showFeedback("還沒選喔！請點擊直直的麵條", "#FFA500", "40%", "50%"); return; }
+        if(correct) { l4.passed = true; showFeedback("太厲害了！全部找對了！", "#2ecc71", "40%", "50%"); l4.bubble.innerHTML = '直直的麵條<br>最好吃啦！'; state.stars[3] = true; setTimeout(() => l4.finish.classList.remove('hidden'), 1500); } 
+        else { showFeedback("好像有選錯或漏掉的喔！再檢查一下", "#e74c3c", "40%", "50%"); }
+    }
+
+    /* === L5 (原L3: 拉直波浪) === */
+    const l5 = { sPath: document.getElementById('l5-straight-path'), sOut: document.getElementById('l5-straight-outline'), wPath: document.getElementById('l5-wavy-path'), wOut: document.getElementById('l5-wavy-outline'), handle: document.getElementById('l5-handle'), quiz: document.getElementById('l5-quiz'), hint: document.getElementById('l5-hint-bubble'), animTimeout: null, boardW: 0, boardH: 0, startX: 0, sY: 0, wY: 0, sMidX: 0, wMidX: 0, maxX: 0, maxAmp: 0, currentEndX: 0, isDragging: false };
+    function initL5() {
+        DOM.instruction.innerHTML = "哪一條比較長呢？"; l5.quiz.style.display = 'none'; l5.handle.style.display = 'none'; l5.hint.style.display = 'none';
+        let b = document.getElementById('game-board'); l5.boardW = b.clientWidth; l5.boardH = b.clientHeight;
+        l5.startX = l5.boardW*0.2; l5.wMidX = l5.boardW*0.55; l5.sMidX = l5.boardW*0.65; l5.maxX = l5.boardW*0.85; l5.sY = l5.boardH*0.42; l5.wY = l5.boardH*0.77; l5.maxAmp = l5.boardH*0.08;
+        let progress = 0;
+        function anim() {
+            progress += 0.015;
+            if(progress <= 1) {
+                let curS = l5.startX + (l5.sMidX - l5.startX)*progress; let curW = l5.startX + (l5.wMidX - l5.startX)*progress;
+                drawStraight(curS); drawWave(curW, l5.maxAmp); l5.animTimeout = requestAnimationFrame(anim);
+            } else { drawStraight(l5.sMidX); drawWave(l5.wMidX, l5.maxAmp); setupL5Handle(); }
+        }
+        anim();
+    }
+    function drawStraight(endX) { let d = `M ${l5.startX} ${l5.sY} L ${endX} ${l5.sY}`; l5.sPath.setAttribute('d', d); l5.sOut.setAttribute('d', d); }
+    function drawWave(endX, amp) {
+        let d = `M ${l5.startX} ${l5.wY}`; let freq = 0.04;
+        for(let x=l5.startX; x<=endX; x+=5) d += ` L ${x} ${l5.wY + Math.sin((x-l5.startX)*freq)*amp}`;
+        d += ` L ${endX} ${l5.wY + Math.sin((endX-l5.startX)*freq)*amp}`; l5.wPath.setAttribute('d', d); l5.wOut.setAttribute('d', d);
+    }
+    function setupL5Handle() {
+        l5.handle.style.display = 'block'; l5.currentEndX = l5.wMidX; l5.hint.style.display = 'block'; updateHPos(l5.maxAmp);
+        let doDrag = (clientX) => {
+            if(!l5.isDragging) return;
+            let mouseX = clientX - document.getElementById('game-board').getBoundingClientRect().left;
+            l5.currentEndX = Math.max(l5.wMidX, Math.min(mouseX, l5.maxX));
+            let pullProgress = (l5.currentEndX - l5.wMidX) / (l5.maxX - l5.wMidX);
+            let currentAmp = l5.maxAmp * (1 - pullProgress);
+            drawWave(l5.currentEndX, currentAmp); updateHPos(currentAmp);
+            if(pullProgress >= 0.95 && l5.quiz.style.display === 'none') { l5.quiz.style.display = 'flex'; l5.currentEndX = l5.maxX; drawWave(l5.currentEndX, 0); updateHPos(0); l5.isDragging = false; l5.handle.style.display = 'none'; l5.hint.style.display = 'none'; }
+        };
+        let endDrag = () => { if(!l5.isDragging) return; l5.isDragging = false; if(l5.quiz.style.display === 'none') { l5.currentEndX = l5.wMidX; drawWave(l5.currentEndX, l5.maxAmp); updateHPos(l5.maxAmp); } };
+        l5.handle.onmousedown = () => { l5.isDragging = true; l5.hint.style.display = 'none'; }; l5.handle.ontouchstart = (e) => { e.preventDefault(); l5.isDragging = true; l5.hint.style.display = 'none'; };
+        document.onmousemove = (e) => doDrag(e.clientX); document.ontouchmove = (e) => doDrag(e.touches[0].clientX); document.onmouseup = endDrag; document.ontouchend = endDrag;
+    }
+    function updateHPos(amp) { 
+        let endY = l5.wY + Math.sin((l5.currentEndX-l5.startX)*0.04)*amp; 
+        l5.handle.style.left = `calc(${l5.currentEndX}px - 3vh)`; l5.handle.style.top = `calc(${endY}px - 3vh)`; 
+        if(l5.hint.style.display === 'block') { l5.hint.style.left = `calc(${l5.currentEndX}px - 6vh)`; l5.hint.style.top = `calc(${endY}px - 10vh)`; }
+    }
+    function l5Answer(isWavy) { if(isWavy){ showFeedback("太聰明了！彎曲的線拉直後更長！", "#2ecc71", "40%", "50%"); state.stars[4] = true; setTimeout(goHome, 3000); } else showFeedback("再看仔細一點喔！", "#e74c3c", "40%", "50%"); }
+</script>
+</body>
+</html>
